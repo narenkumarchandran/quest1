@@ -1,0 +1,41 @@
+Hybrid Video Dialogue Detection Pipeline
+==========================================
+
+1. Overview
+-----------
+This system implements a coarse-to-fine hybrid architecture to identify the exact first frame where a specific target dialogue appears in a video. It is designed to handle multiple sources of dialogue:
+- Embedded subtitle streams (.srt, .vtt)
+- Burned-in text / Scene text (OCR)
+- Spoken dialogue with no visual text (ASR)
+
+2. Architecture
+---------------
+The pipeline prioritizes speed and accuracy by following a strict fallback chain:
+1. Fast Text Search: Downloads video and checks for embedded subtitle streams using `ffprobe` and extracts them with `ffmpeg`. Subtitle text is searched directly.
+2. Spoken Audio Fallback: If no subtitles exist, the audio track is extracted and transcribed using GPU-accelerated `faster-whisper`.
+3. Coarse Visual Scan: If visual text is expected or Whisper fails, a coarse 1 FPS OCR scan using `EasyOCR` finds candidate time regions.
+4. Fine Temporal Refinement: Once a candidate timestamp is found, a small window (±2 seconds) is scanned at full FPS. The system searches for the earliest frame where the *complete* dialogue is visually present above a similarity threshold.
+
+3. Matching Strategy
+--------------------
+String matching is handled by `RapidFuzz` using a weighted blend of `token_set_ratio` and `partial_ratio`. This approach is robust to OCR noise, Whisper word-flips, and partial text reveals, ensuring that minor spelling differences or added punctuation do not break the pipeline.
+
+4. Ambiguity and "Exact Frame" Definition
+-----------------------------------------
+"The target frame is the earliest frame in which the complete target dialogue is visually detectable with confidence above the configured threshold."
+
+If the system detects the dialogue was spoken but is never visually rendered on screen, it explicitly marks the result as `detection_type="spoken_dialogue"` and returns the frame corresponding to the start of the audio utterance. It does not falsely claim OCR detected the text.
+
+5. Confidence Scoring
+---------------------
+A confidence score (0-100) and level (HIGH/MEDIUM/LOW) are calculated based on:
+- Source of the match (Subtitles > Fusion > OCR > Whisper)
+- Fuzzy match similarity score
+- Agreement between audio and visual timestamps
+- Consistency across consecutive frames
+
+6. Optimizations
+----------------
+- Coarse-to-fine OCR: Scanning a 1-hour video at 30 FPS requires 108,000 OCR passes. Scanning at 1 FPS requires 3,600 passes. The exact frame is then found by scanning only ~120 frames in the refinement window.
+- ffmpeg sub-extraction: Subtitle tracks are extracted in milliseconds without re-encoding video.
+- Local GPU processing: `faster-whisper` and `EasyOCR` leverage CUDA for maximum local performance without network latency or API costs.
