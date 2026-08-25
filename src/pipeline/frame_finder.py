@@ -43,7 +43,7 @@ def find_exact_frame(
         console.print(
             f"[bold cyan]> Skipping visual OCR refinement (fast mode). Extracting frame at {seconds_to_timestamp(candidate_timestamp_sec)}...[/bold cyan]"
         )
-        return _spoken_fallback(video_path, candidate_timestamp_sec, target_dialogue, source_type, output_dir)
+        return _spoken_fallback(video_path, candidate_timestamp_sec, target_dialogue, source_type, output_dir, segment_start_sec)
 
     clip_candidate = candidate_timestamp_sec - segment_start_sec
     start_sec = max(0.0, clip_candidate - window_sec)
@@ -141,17 +141,19 @@ def find_exact_frame(
             "This is likely spoken-only dialogue or embedded scene text that OCR missed. "
             "Falling back to candidate timestamp."
         )
-        return _spoken_fallback(video_path, candidate_timestamp_sec, target_dialogue, source_type, output_dir)
+        return _spoken_fallback(video_path, candidate_timestamp_sec, target_dialogue, source_type, output_dir, segment_start_sec)
 
     console.print("[red]x Refinement failed to find visual or spoken target.[/red]")
     return None
 
-def _spoken_fallback(video_path, candidate_timestamp_sec, target_dialogue, source_type, output_dir):
+def _spoken_fallback(video_path, candidate_timestamp_sec, target_dialogue, source_type, output_dir, segment_start_sec=0.0):
     from utils.video_utils import extract_frame_at
     try:
-        f_rgb = extract_frame_at(video_path, candidate_timestamp_sec)
+        clip_sec = max(0.0, candidate_timestamp_sec - segment_start_sec)
+        f_rgb = extract_frame_at(video_path, clip_sec)
         img_path = save_frame(f_rgb, f"{output_dir}/frame_spoken_fallback.png")
-    except Exception:
+    except Exception as e:
+        console.print(f"[red]Error extracting fallback frame:[/red] {e}")
         img_path = ""
 
     # Dummy match result to represent the spoken match

@@ -87,7 +87,7 @@ def inspect_video(video_path: str) -> InspectionResult:
         elif codec_type == "subtitle":
             inspection.subtitle_streams.append(stream_info)
 
-    # ── Report ────────────────────────────────────────────────────────────────
+    # Report
     console.print(
         f"  [dim]Resolution:[/dim] {inspection.width}×{inspection.height}  "
         f"[dim]FPS:[/dim] {inspection.fps:.2f}  "

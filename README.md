@@ -22,6 +22,7 @@ If the text is not found visually on screen (i.e., it's a spoken dialogue), the 
 - Python 3.8+
 - `ffmpeg` installed and available in your system's PATH.
 - (Optional but highly recommended) NVIDIA GPU with CUDA support for Whisper and EasyOCR acceleration.
+  > **Note for Users without a GPU:** If you don't have a local GPU, `faster-whisper` and `EasyOCR` can be quite slow on a CPU. We highly recommend running the pipeline on **Google Colab**, **Kaggle**, or another cloud provider where you can access a free GPU instance (like a T4) to run the script.
 
 ## Installation
 
@@ -69,18 +70,25 @@ python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type o
 
 ## Output Format
 
-Results are exported as a structured JSON object upon completion, including the exact timestamp, mathematically or visually derived frame number, and the tools used to find the match.
+All extracted files and results for a given video are stored in an isolated folder named after the video's ID inside the output directory (e.g., `output/<VIDEO_ID>/`). This folder contains:
 
+1. **Subtitle File**: Downloaded `.srt` or `.vtt` file (if available).
+2. **Audio File**: Extracted audio `.wav` (if Whisper was required).
+3. **Short Video Clip**: A 20-second segmented `.mp4` clip around the target dialogue.
+4. **Frame Screenshot**: A `.png` image of the exact frame where the text is found or spoken.
+5. **Result JSON**: A structured JSON object containing the exact timestamp, frame number, and matching details.
+
+Example JSON output:
 ```json
 {
   "status": "success",
   "detection_type": "spoken_dialogue",
-  "timestamp": "00:02:08.740",
-  "frame_number": 3862,
-  "dialogue_text": "I'm the type of person",
+  "timestamp": "00:01:33.340",
+  "frame_number": 2237,
+  "dialogue_text": "you take the red pill",
   "similarity_score": 100.0,
-  "frame_image_path": null,
-  "tool_used": "whisper",
-  "video_dir": "output\\iXZ1jeTCU-o"
+  "frame_image_path": "C:\\Users\\name\\output\\zE7PKRjrid4\\frame_spoken_fallback.png",
+  "tool_used": "subtitle",
+  "video_dir": "C:\\Users\\name\\output\\zE7PKRjrid4"
 }
 ```

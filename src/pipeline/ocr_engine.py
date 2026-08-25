@@ -89,10 +89,8 @@ def coarse_ocr_scan(
                     f"Score: {match.score:.1f}%)"
                 )
                 return OCRCandidate(
-                    # Store the ORIGINAL video timestamp, not the clip-relative one
                     timestamp_sec=original_timestamp,
                     frame_number=frame_num,
-                    # Store only the target text so dialogue_text in the JSON is clean
                     text=target_dialogue,
                     match_result=match,
                     bounding_boxes=bboxes,

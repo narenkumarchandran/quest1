@@ -173,12 +173,11 @@ def transcribe_and_search(
                 )
                 best_score = match.score
 
-        # Stop chunking early if we found the target (only break after the chunk generator is fully exhausted!)
         if best_candidate and best_score >= threshold:
             break
 
         if duration <= chunk_sec:
-            break  # Short file — only one chunk needed
+            break  
         chunk_start += chunk_sec
 
     # Cleanup temp chunk file

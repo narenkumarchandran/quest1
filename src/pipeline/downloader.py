@@ -19,6 +19,8 @@ class DownloadResult:
 
 _YTDLP_BASE = [
     "yt-dlp",
+    "--impersonate", "chrome",
+    "--cookies-from-browser", "firefox",
     "--force-ipv4",
     "--no-check-certificates",
     "--js-runtimes", "node",
@@ -115,7 +117,6 @@ def _find_existing_audio(out_dir: Path) -> Optional[str]:
             return str(files[0])
     return None
 
-# ── Public Download Functions ─────────────────────────────────────────────────
 
 def download_subtitles_only(url: str, video_dir: Path) -> DownloadResult:
     
@@ -151,13 +152,13 @@ def download_audio_only(url: str, video_dir: str) -> DownloadResult:
     out_dir = Path(video_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Reuse existing audio
+    # Reuse existing audio
     existing_audio = _find_existing_audio(out_dir)
     if existing_audio:
         console.print(f"[green]> Reusing existing audio:[/green] {Path(existing_audio).name}")
         return DownloadResult(audio_path=existing_audio, video_dir=str(out_dir))
 
-    # 2. Extract from existing full video via ffmpeg (zero network)
+    # Extract from existing full video via ffmpeg (zero network)
     existing_video = _find_existing_mp4(out_dir)
     if existing_video:
         console.print(f"[green]> Extracting audio from existing video:[/green] {Path(existing_video).name}")
@@ -174,7 +175,7 @@ def download_audio_only(url: str, video_dir: str) -> DownloadResult:
         except subprocess.CalledProcessError:
             console.print("[yellow]ffmpeg extraction failed. Downloading audio from network...[/yellow]")
 
-    # 3. Download audio track from network
+    # Download audio track from network
     output_template = str(out_dir / "%(title)s_audio.%(ext)s")
     cmd = _YTDLP_BASE + [
         "-f", "bestaudio[ext=m4a]/bestaudio/worst",

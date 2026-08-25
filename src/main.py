@@ -64,12 +64,45 @@ def _get_fps_fallback(video_path: str, url: str) -> float:
 
     return 25.0
 
+class JSONErrorArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        error_data = {
+            "status": "failed",
+            "reason": "Argument parsing error",
+            "error_message": message,
+            "instructions": "Please provide the required arguments. Example: python src/main.py --url <URL> --target <TARGET>"
+        }
+        print(json.dumps(error_data, indent=2))
+        sys.exit(0)
+
 def main():
+    try:
+        _run_main()
+    except KeyboardInterrupt:
+        error_data = {
+            "status": "failed",
+            "reason": "Execution interrupted by user.",
+            "error_message": "KeyboardInterrupt",
+            "instructions": "The process was stopped manually."
+        }
+        print(json.dumps(error_data, indent=2))
+        sys.exit(0)
+    except Exception as e:
+        error_data = {
+            "status": "failed",
+            "reason": "An unexpected error occurred.",
+            "error_message": str(e),
+            "instructions": "Please check the error message and ensure your inputs are correct."
+        }
+        print(json.dumps(error_data, indent=2))
+        sys.exit(0)
+
+def _run_main():
     # Anchor the default output directory to the project root (one level up from src/)
     project_root = Path(__file__).resolve().parent.parent
     default_output = str(project_root / "output")
 
-    parser = argparse.ArgumentParser(description="Hybrid Video Dialogue Detector")
+    parser = JSONErrorArgumentParser(description="Hybrid Video Dialogue Detector")
     parser.add_argument("--url", required=True, help="Video URL to analyze")
     parser.add_argument("--target", required=True, help="Target dialogue to find")
     parser.add_argument("--output", default=default_output, help="Output directory")
@@ -133,9 +166,8 @@ def main():
     # ── Step 3: Targeted Segment Download + OCR ────────────────────────────────
     segment_start_sec = None  # offset of the downloaded clip inside the original video
     
-    # If we found it in the subtitles, we trust it and skip the heavy OCR/video pipeline.
-    if candidate_timestamp is not None and source_type != "subtitle":
-        console.print("\n[bold cyan]> Target found! Downloading targeted video segment for OCR...[/bold cyan]")
+    if candidate_timestamp is not None:
+        console.print("\n[bold cyan]> Target found! Downloading targeted video segment...[/bold cyan]")
 
         segment_start_sec = max(0, candidate_timestamp - 10.0)
         end_sec = candidate_timestamp + 10.0
@@ -143,7 +175,7 @@ def main():
         vid_dl = download_video_segment(url, segment_start_sec, end_sec, video_dir=video_dir)
         video_path = vid_dl.video_path
 
-        if video_path:
+        if video_path and source_type != "subtitle":
             console.print("\n[bold cyan]> Verifying visual presence in video segment...[/bold cyan]")
             ocr_candidate = coarse_ocr_scan(
                 video_path, target_dialogue, sample_fps=1.0, threshold=threshold, gpu=args.gpu,
@@ -183,7 +215,7 @@ def main():
         exact_frame_result = find_exact_frame(
             video_path, target_dialogue, candidate_timestamp, source_type=source_type,
             window_sec=refinement_window, output_dir=video_dir, gpu=args.gpu,
-            verify_visual=not args.fast_mode,
+            verify_visual=not args.fast_mode and source_type != "subtitle",
             segment_start_sec=segment_start_sec if segment_start_sec is not None else 0.0
         )
 

@@ -76,6 +76,7 @@ During the design phase, we considered two primary alternatives that were ultima
 - Ensure you have **Python 3.8+** installed.
 - Install **ffmpeg** and ensure it's available in your system's PATH.
 - (Recommended) NVIDIA GPU with CUDA for faster processing.
+  > **No local GPU?** Because `faster-whisper` and `EasyOCR` require significant compute, users without a dedicated GPU can easily run this pipeline on a cloud provider like **Google Colab** using a free GPU instance.
 
 ### Installation
 1. Clone the repository and navigate into it:
@@ -96,6 +97,30 @@ python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type o
 
 # GPU Accelerated Run
 python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type of person" --gpu
+```
+## Output Format
+
+All extracted files and results for a given video are stored in an isolated folder named after the video's ID inside the output directory (e.g., `output/<VIDEO_ID>/`). This folder contains:
+
+1. **Subtitle File**: Downloaded `.srt` or `.vtt` file (if available).
+2. **Audio File**: Extracted audio `.wav` (if Whisper was required).
+3. **Short Video Clip**: A 20-second segmented `.mp4` clip around the target dialogue.
+4. **Frame Screenshot**: A `.png` image of the exact frame where the text is found or spoken.
+5. **Result JSON**: A structured JSON object containing the exact timestamp, frame number, and matching details.
+
+Example JSON output:
+```json
+{
+  "status": "success",
+  "detection_type": "spoken_dialogue",
+  "timestamp": "00:01:33.340",
+  "frame_number": 2237,
+  "dialogue_text": "you take the red pill",
+  "similarity_score": 100.0,
+  "frame_image_path": "C:\\Users\\name\\output\\zE7PKRjrid4\\frame_spoken_fallback.png",
+  "tool_used": "subtitle",
+  "video_dir": "C:\\Users\\name\\output\\zE7PKRjrid4"
+}
 ```
 
 ## 8. Future Enhancements

@@ -101,13 +101,12 @@ def _vtt_to_srt(vtt_text: str) -> str:
     # VTT uses dots in timestamps (00:00:01.000), SRT uses commas (00:00:01,000)
     text = re.sub(r"(\d{2}:\d{2}:\d{2})\.(\d{3})", r"\1,\2", text)
 
-    # Add sequential indices if missing (VTT doesn't require them)
+    
     lines_out = []
     block_num = 1
     for block in text.strip().split("\n\n"):
         if "-->" in block:
             block_lines = block.strip().splitlines()
-            # If first line is a number, keep it; otherwise prepend one
             if not block_lines[0].strip().isdigit():
                 block = f"{block_num}\n{block}"
                 block_num += 1
@@ -136,7 +135,7 @@ def run_subtitle_search(
     threshold: float = 75.0,
 ) -> SubtitleSearchResult:
     
-    # ── 1. Try embedded subtitle streams ─────────────────────────────────────
+    #Try embedded subtitle streams
     for stream_idx in subtitle_stream_indices:
         srt_path = extract_embedded_subtitles(video_path, stream_idx, output_dir)
         if srt_path:
@@ -157,7 +156,7 @@ def run_subtitle_search(
                     subtitle_file_path=srt_path,
                 )
 
-    # ── 2. Try external subtitle files ────────────────────────────────────────
+    # Try external subtitle files
     for sub_path in external_subtitle_paths:
         console.print(
             f"[bold cyan]> Searching external subtitle file:[/bold cyan] "
