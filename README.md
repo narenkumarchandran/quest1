@@ -1,18 +1,21 @@
 # Hybrid Video Dialogue Detector
 
-A highly optimized, multi-modal pipeline designed to find the exact frame and timestamp where a specific target dialogue appears in a video. It is built to seamlessly handle multiple sources of dialogue:
-- **Embedded Subtitles** (`.srt`, `.vtt`)
+A highly optimized, multi-modal pipeline designed to find the exact frame and timestamp where a specific target dialogue appears in a video. It is built to seamlessly handle multiple sources of dialogue while minimizing bandwidth and processing time:
+- **Embedded/External Subtitles** (`.srt`, `.vtt`)
 - **Spoken Audio** (via GPU-accelerated `faster-whisper`)
 - **Visual Scene Text** (via `EasyOCR`)
 
 ## How It Works (The Pipeline)
 
-The pipeline prioritizes speed and accuracy by following a strict fallback chain:
+The pipeline prioritizes speed and efficiency by following a strict "Audio-First" fallback chain. We avoid downloading massive video files unless strictly necessary:
 
-1. **Fast Text Search (Subtitles):** Extracts embedded subtitle tracks using `ffmpeg` and fuzzy-matches the target dialogue directly against the text. If found, it skips heavy processing.
-2. **Audio-First Fallback (Whisper):** If no subtitles exist, the audio track is extracted and transcribed using `faster-whisper`. It uses a highly memory-optimized, chunked pipeline with greedy decoding to safely process long videos on constrained VRAM (e.g., 4GB GPUs).
-3. **Coarse Visual Scan (OCR):** If visual text is expected (or if audio/subtitles provide a candidate timestamp), a 1.0 FPS coarse OCR scan is performed using `EasyOCR` to narrow down the exact visual appearance.
-4. **Fine Temporal Refinement:** Once a candidate window (±2 seconds) is isolated, the system scans at full FPS to pinpoint the exact, earliest frame where the *complete* dialogue is visually present above a similarity threshold.
+1. **Fast Subtitle Search:** We use `yt-dlp` to fetch *only* the subtitle files. The target dialogue is fuzzy-matched directly against the text. If found, we instantly get a candidate timestamp.
+2. **Audio-First Fallback (Whisper):** If no subtitles exist or match, *only* the audio track is extracted and transcribed using `faster-whisper`.
+3. **Targeted Segment Download & OCR Fusion:** Once a candidate timestamp is isolated (via subtitles or audio), the system downloads a short, targeted 20-second video segment (±10 seconds around the candidate) rather than the entire 10GB video. A visual OCR scan is run on this short segment to see if the text is physically on-screen.
+4. **Full Video OCR (Last Resort):** If the dialogue is spoken but not physically written on-screen (or audio fails), the pipeline falls back to downloading the full video and running a coarse 1 FPS OCR scan.
+
+## Mathematical Frame Calculation
+If the text is not found visually on screen (i.e., it's a spoken dialogue), the pipeline falls back to a mathematical approach. It fetches the video's FPS and calculates the exact start frame using `int(timestamp_in_seconds * FPS)`, ensuring you always get an accurate `frame_number` in your output.
 
 ## Requirements
 
@@ -56,7 +59,7 @@ python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type o
 ```
 
 ### Options
-- `--url`: The URL of the video (YouTube, OK.ru, etc. supported via `yt-dlp`).
+- `--url`: The URL of the video (YouTube, OK.ru, Vimeo, etc. supported via `yt-dlp`).
 - `--target`: The target dialogue phrase you want to locate.
 - `--gpu`: Enable CUDA acceleration for `faster-whisper` and `EasyOCR` (significantly faster).
 - `--threshold`: The fuzzy match confidence threshold (default: `75.0`).
@@ -64,28 +67,20 @@ python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type o
 - `--disable-subs`: Force the pipeline to ignore fast subtitle matching and test the Whisper/OCR fallback pathways.
 - `--output`: Custom output directory (default is `./output`).
 
-## Output
+## Output Format
 
-Results are exported as a structured JSON object upon completion, including the exact timestamp, similarity score, match source, and a confidence assessment. 
+Results are exported as a structured JSON object upon completion, including the exact timestamp, mathematically or visually derived frame number, and the tools used to find the match.
 
 ```json
 {
   "status": "success",
   "detection_type": "spoken_dialogue",
   "timestamp": "00:02:08.740",
-  "frame_number": null,
+  "frame_number": 3862,
   "dialogue_text": "I'm the type of person",
   "similarity_score": 100.0,
-  "confidence": {
-    "score": 65,
-    "level": "MEDIUM",
-    "signals": {
-      "subtitle_match": false,
-      "spoken_strong": true,
-      ...
-    }
-  },
-  "source": "whisper",
+  "frame_image_path": null,
+  "tool_used": "whisper",
   "video_dir": "output\\iXZ1jeTCU-o"
 }
 ```
