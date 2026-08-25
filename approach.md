@@ -108,18 +108,56 @@ All extracted files and results for a given video are stored in an isolated fold
 4. **Frame Screenshot**: A `.png` image of the exact frame where the text is found or spoken.
 5. **Result JSON**: A structured JSON object containing the exact timestamp, frame number, and matching details.
 
-Example JSON output:
+Example Executions & Outputs:
+
+### Example 1: Visual Match (OCR)
+*(Finding the phrase "nice jewish girl, god fearing" in Vimeo ID 92760926)*
+
+**Output Frame (`frame_216.png`):**
+![Sample Output Frame](./assets/sample_output.png)
+
+**Result JSON:**
+```json
+{
+  "status": "success",
+  "detection_type": "visual_text",
+  "timestamp": "00:00:08.640",
+  "frame_number": 216,
+  "dialogue_text": "nice jewish girl, god fearing",
+  "similarity_score": 100.0,
+  "frame_image_path": "C:\\Quest1\\output\\92760926\\frame_216.png",
+  "tool_used": "ocr",
+  "video_dir": "C:\\Quest1\\output\\92760926"
+}
+```
+
+### Example 2: Spoken Match (Whisper)
+*(Finding the phrase "My mind rebels at stagnation" in Video ID 248244667877)*
+
+**Result JSON:**
 ```json
 {
   "status": "success",
   "detection_type": "spoken_dialogue",
-  "timestamp": "00:01:33.340",
-  "frame_number": 2237,
-  "dialogue_text": "you take the red pill",
-  "similarity_score": 100.0,
-  "frame_image_path": "C:\\Users\\name\\output\\zE7PKRjrid4\\frame_spoken_fallback.png",
-  "tool_used": "subtitle",
-  "video_dir": "C:\\Users\\name\\output\\zE7PKRjrid4"
+  "timestamp": "00:05:24.990",
+  "frame_number": null,
+  "dialogue_text": "My mind rebels at stagnation",
+  "similarity_score": 85.0,
+  "confidence": {
+    "score": 15,
+    "level": "LOW",
+    "signals": {
+      "subtitle_match": false,
+      "ocr_strong": false,
+      "ocr_moderate": false,
+      "spoken_strong": true,
+      "timestamp_agreement": false,
+      "consecutive_frames": false
+    }
+  },
+  "frame_image_path": "",
+  "source": "whisper",
+  "video_dir": "C:\\Users\\naren\\Desktop\\Quest1\\output\\248244667877"
 }
 ```
 
