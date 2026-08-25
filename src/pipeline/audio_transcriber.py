@@ -1,16 +1,3 @@
-"""
-pipeline/audio_transcriber.py
-───────────────────────────────
-Uses faster-whisper (local, GPU-accelerated) to transcribe spoken dialogue.
-Returns word-level timestamps to help localize the exact spoken frame if
-no visual text is present.
-
-Why faster-whisper?
-  - Up to 4x faster than standard openai-whisper
-  - Full local execution (no API calls)
-  - Memory efficient
-"""
-
 import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -27,7 +14,6 @@ from utils.text_utils import seconds_to_timestamp
 
 console = Console()
 
-
 @dataclass
 class AudioCandidate:
     start_sec: float
@@ -35,16 +21,11 @@ class AudioCandidate:
     text: str
     match_result: MatchResult
 
-
 # Audio file extensions that can be fed directly to Whisper (no ffmpeg extraction needed)
 _AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".aac"}
 
-
 def extract_audio(media_path: str, output_dir: str = "output") -> str:
-    """
-    Extract audio as a 16kHz mono WAV file (optimal for Whisper).
-    If media_path is already a WAV file at the right spec, return it directly.
-    """
+    
     src = Path(media_path)
     out_path = Path(output_dir) / "extracted_audio.wav"
 
@@ -77,9 +58,8 @@ def extract_audio(media_path: str, output_dir: str = "output") -> str:
     subprocess.run(cmd, check=True)
     return str(out_path)
 
-
 def _get_audio_duration(audio_path: str) -> float:
-    """Return duration of an audio file in seconds using ffprobe."""
+    
     try:
         result = subprocess.run(
             ["ffprobe", "-v", "error", "-show_entries", "format=duration",
@@ -90,9 +70,8 @@ def _get_audio_duration(audio_path: str) -> float:
     except Exception:
         return 0.0
 
-
 def _extract_chunk(audio_path: str, start_sec: float, duration_sec: float, out_path: str) -> bool:
-    """Extract a time slice from audio_path into out_path using ffmpeg."""
+    
     try:
         subprocess.run([
             "ffmpeg", "-y", "-v", "error",
@@ -105,7 +84,6 @@ def _extract_chunk(audio_path: str, start_sec: float, duration_sec: float, out_p
     except subprocess.CalledProcessError:
         return False
 
-
 def transcribe_and_search(
     media_path: str,
     target_dialogue: str,
@@ -116,12 +94,7 @@ def transcribe_and_search(
     output_dir: str = "output",
     chunk_minutes: float = 5.0,
 ) -> Optional[AudioCandidate]:
-    """
-    1. Extract/prepare audio from a video OR audio file
-    2. Run faster-whisper on 5-minute chunks (prevents OOM on long videos)
-    3. Fuzzy-match against target dialogue with word-level timestamps
-    4. Return the best AudioCandidate if found
-    """
+    
     try:
         audio_path = extract_audio(media_path, output_dir)
     except subprocess.CalledProcessError as e:
@@ -227,6 +200,5 @@ def transcribe_and_search(
     del model
     import gc
     gc.collect()
-
 
     return best_candidate

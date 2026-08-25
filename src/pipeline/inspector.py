@@ -1,14 +1,3 @@
-"""
-pipeline/inspector.py
-──────────────────────
-ffprobe-based stream inspection for the downloaded video file.
-
-Responsibilities:
-  - Detect video / audio / subtitle streams inside the container
-  - Report whether embedded subtitle tracks exist
-  - Provide metadata (FPS, resolution, codec, duration) to the pipeline
-"""
-
 import subprocess
 import json
 from dataclasses import dataclass, field
@@ -17,7 +6,6 @@ from rich.console import Console
 
 console = Console()
 
-
 @dataclass
 class StreamInfo:
     index: int
@@ -25,7 +13,6 @@ class StreamInfo:
     codec_name: str
     language: Optional[str] = None
     extra: dict = field(default_factory=dict)
-
 
 @dataclass
 class InspectionResult:
@@ -41,13 +28,8 @@ class InspectionResult:
     def has_subtitle_stream(self) -> bool:
         return len(self.subtitle_streams) > 0
 
-
 def inspect_video(video_path: str) -> InspectionResult:
-    """
-    Run ffprobe on the video file and parse its stream information.
-
-    Uses JSON output format for reliable parsing.
-    """
+    
     console.print(f"[bold cyan]> Inspecting video streams:[/bold cyan] {video_path}")
 
     cmd = [

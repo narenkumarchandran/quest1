@@ -1,11 +1,3 @@
-"""
-pipeline/ocr_engine.py
-───────────────────────
-GPU-accelerated OCR using EasyOCR to scan video frames for burned-in text.
-Implements the "coarse" part of the coarse-to-fine architecture by scanning
-at a low framerate (e.g., 1 FPS) to find candidate regions.
-"""
-
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from rich.console import Console
@@ -24,7 +16,6 @@ from utils.text_utils import clean_ocr_text, seconds_to_timestamp
 
 console = Console()
 
-
 @dataclass
 class OCRCandidate:
     timestamp_sec: float
@@ -32,7 +23,6 @@ class OCRCandidate:
     text: str
     match_result: MatchResult
     bounding_boxes: list
-
 
 def coarse_ocr_scan(
     video_path: str,
@@ -43,24 +33,7 @@ def coarse_ocr_scan(
     gpu: bool = True,
     segment_start_sec: float = 0.0,
 ) -> Optional[OCRCandidate]:
-    """
-    Scan the video at low FPS to find the first candidate region containing
-    the target dialogue.
-
-    Args:
-        video_path:         Path to the video file.
-        target_dialogue:    Text to search for.
-        langs:              Languages for EasyOCR (e.g., ["en", "ru"]).
-        sample_fps:         Frames per second to sample (default 1.0).
-        threshold:          Minimum fuzzy match score (0-100).
-        gpu:                Whether to use GPU acceleration.
-        segment_start_sec:  Offset (seconds) of this clip's start in the original
-                            video. All returned timestamps will have this added so
-                            they reflect the real position in the source video.
-
-    Returns:
-        OCRCandidate if found, else None.
-    """
+    
     console.print(
         f"[bold cyan]> Starting coarse OCR scan ({sample_fps} FPS)...[/bold cyan]"
     )
@@ -89,12 +62,8 @@ def coarse_ocr_scan(
             else:
                 ocr_frame = frame_rgb
 
-            # EasyOCR expects BGR or RGB numpy arrays, or file paths.
-            # We pass the RGB array directly.
             results = reader.readtext(ocr_frame, detail=1)
 
-            # Assemble all text in the frame
-            # results is a list of tuples: (bbox, text, confidence)
             frame_texts = []
             bboxes = []
             for bbox, text, conf in results:

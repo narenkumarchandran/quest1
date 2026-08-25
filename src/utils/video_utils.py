@@ -1,19 +1,10 @@
-"""
-utils/video_utils.py
-─────────────────────
-OpenCV helpers for frame extraction used across pipeline modules.
-"""
-
 import cv2
 import numpy as np
 from pathlib import Path
 from typing import Iterator, Tuple
 
-
 def get_video_info(video_path: str) -> dict:
-    """
-    Return basic video metadata: fps, total_frames, duration_sec, width, height.
-    """
+    
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {video_path}")
@@ -34,12 +25,8 @@ def get_video_info(video_path: str) -> dict:
         "height": height,
     }
 
-
 def extract_frame_at(video_path: str, second: float) -> np.ndarray:
-    """
-    Extract a single frame at the given timestamp (seconds).
-    Returns the frame as an RGB numpy array.
-    """
+    
     cap = cv2.VideoCapture(str(video_path))
     cap.set(cv2.CAP_PROP_POS_MSEC, second * 1000)
     ret, frame = cap.read()
@@ -50,12 +37,8 @@ def extract_frame_at(video_path: str, second: float) -> np.ndarray:
 
     return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-
 def extract_frame_by_number(video_path: str, frame_number: int) -> np.ndarray:
-    """
-    Extract a specific frame by its 0-indexed frame number.
-    Returns the frame as an RGB numpy array.
-    """
+    
     cap = cv2.VideoCapture(str(video_path))
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
     ret, frame = cap.read()
@@ -66,25 +49,13 @@ def extract_frame_by_number(video_path: str, frame_number: int) -> np.ndarray:
 
     return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-
 def iter_frames_sampled(
     video_path: str,
     sample_fps: float = 1.0,
     start_sec: float = 0.0,
     end_sec: float = None,
 ) -> Iterator[Tuple[int, float, np.ndarray]]:
-    """
-    Yield (frame_number, timestamp_sec, frame_rgb) at a reduced frame rate.
-
-    Args:
-        video_path:  Path to the video file.
-        sample_fps:  Frames to yield per second (default 1 FPS for coarse scan).
-        start_sec:   Start of the region to scan.
-        end_sec:     End of the region (None = entire video).
-
-    Yields:
-        (frame_number, timestamp_sec, rgb_frame)
-    """
+    
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {video_path}")
@@ -121,19 +92,12 @@ def iter_frames_sampled(
 
     cap.release()
 
-
 def iter_frames_full(
     video_path: str,
     start_sec: float,
     end_sec: float,
 ) -> Iterator[Tuple[int, float, np.ndarray]]:
-    """
-    Yield every frame between start_sec and end_sec (full FPS scan).
-    Used in the temporal refinement window.
-
-    Yields:
-        (frame_number, timestamp_sec, rgb_frame)
-    """
+    
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {video_path}")
@@ -158,11 +122,8 @@ def iter_frames_full(
 
     cap.release()
 
-
 def save_frame(frame_rgb: np.ndarray, path: str) -> str:
-    """
-    Save an RGB frame as PNG and return the path.
-    """
+    
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)

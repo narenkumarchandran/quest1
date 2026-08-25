@@ -1,12 +1,3 @@
-"""
-pipeline/frame_finder.py
-─────────────────────────
-The "fine" part of the coarse-to-fine architecture.
-Takes a candidate timestamp (from coarse OCR, Whisper, or subtitles)
-and scans every frame in a small temporal window (e.g. ±2 seconds)
-to find the EXACT FIRST FRAME where the complete target text appears.
-"""
-
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from rich.console import Console
@@ -25,7 +16,6 @@ from utils.text_utils import clean_ocr_text, seconds_to_timestamp
 
 console = Console()
 
-
 @dataclass
 class ExactFrameResult:
     frame_number: int
@@ -34,7 +24,6 @@ class ExactFrameResult:
     match_result: MatchResult
     frame_image_path: str
     is_visual: bool           # True if text is visually present, False if spoken-only
-
 
 def find_exact_frame(
     video_path: str,
@@ -49,26 +38,13 @@ def find_exact_frame(
     verify_visual: bool = True,
     segment_start_sec: float = 0.0,
 ) -> Optional[ExactFrameResult]:
-    """
-    Scan every frame in [candidate - window, candidate + window] to find the
-    first frame where the complete target text is visually present.
-
-    candidate_timestamp_sec is the ORIGINAL-VIDEO timestamp (already offset).
-    segment_start_sec is the offset of the clip in the original video — it is
-    subtracted to get the clip-relative seek position for cv2, then added back
-    to produce original-video timestamps in all returned results.
-
-    If source_type == "whisper" and no visual text is found, fallback to
-    returning the spoken timestamp (is_visual=False).
-    """
+    
     if not verify_visual and source_type in ["whisper", "subtitle"]:
         console.print(
             f"[bold cyan]> Skipping visual OCR refinement (fast mode). Extracting frame at {seconds_to_timestamp(candidate_timestamp_sec)}...[/bold cyan]"
         )
         return _spoken_fallback(video_path, candidate_timestamp_sec, target_dialogue, source_type, output_dir)
 
-    # candidate_timestamp_sec is already in original-video time.
-    # Convert to clip-relative time for seeking inside the video file.
     clip_candidate = candidate_timestamp_sec - segment_start_sec
     start_sec = max(0.0, clip_candidate - window_sec)
     end_sec = clip_candidate + window_sec
@@ -89,10 +65,6 @@ def find_exact_frame(
 
     best_match_frame = None
     best_score = -1.0
-
-    # Definition of exact frame:
-    # "The target frame is the earliest frame in which the complete target dialogue
-    # is visually detectable with confidence above the configured threshold."
 
     try:
         for frame_num, timestamp, frame_rgb in frame_generator:
@@ -116,8 +88,6 @@ def find_exact_frame(
 
             match = is_match(full_text, target_dialogue, threshold)
 
-            # Since we want the EARLIEST frame with COMPLETE text,
-            # as soon as we cross the high threshold, we return it.
             if match.is_match:
                 # Convert clip-relative timestamp back to original-video timestamp
                 original_ts = timestamp + segment_start_sec
@@ -175,7 +145,6 @@ def find_exact_frame(
 
     console.print("[red]x Refinement failed to find visual or spoken target.[/red]")
     return None
-
 
 def _spoken_fallback(video_path, candidate_timestamp_sec, target_dialogue, source_type, output_dir):
     from utils.video_utils import extract_frame_at

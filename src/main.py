@@ -1,10 +1,3 @@
-"""
-main.py
-────────
-CLI entry point for the hybrid video dialogue detection pipeline.
-Ties together downloader, inspector, subtitles, audio, and OCR modules.
-"""
-
 import argparse
 import json
 import os
@@ -38,19 +31,15 @@ import re
 
 console = Console()
 
-
 def _slugify(text: str, max_len: int = 60) -> str:
-    """Convert a dialogue string into a safe filename slug.
-    e.g. "Can I say something?" -> "can_i_say_something"
-    """
+    
     text = text.lower().strip()
     text = re.sub(r"[^\w\s-]", "", text)   # remove punctuation
     text = re.sub(r"[\s-]+", "_", text)    # spaces/dashes -> underscore
     return text[:max_len].strip("_")
 
-
 def _get_fps_fallback(video_path: str, url: str) -> float:
-    """Attempt to get the video FPS from the local file or via yt-dlp."""
+    
     if video_path and os.path.exists(video_path):
         try:
             from utils.video_utils import get_video_info
@@ -74,7 +63,6 @@ def _get_fps_fallback(video_path: str, url: str) -> float:
         pass
 
     return 25.0
-
 
 def main():
     # Anchor the default output directory to the project root (one level up from src/)
@@ -111,7 +99,6 @@ def main():
 
     # ── Step 0: Resolve per-movie directory ────────────────────────────────────
     video_dir = str(_get_video_dir(url, out_dir))
-
 
     # ── Step 1: Subtitle Search ────────────────────────────────────────────────
     if not args.disable_subs:
@@ -192,8 +179,6 @@ def main():
 
     # ── Step 5: Temporal Refinement ────────────────────────────────────────────
     if candidate_timestamp is not None and video_path is not None:
-        # Word-level timestamps from Whisper are accurate to ~±0.1s.
-        # Keep the window tight at ±2s to avoid false OCR positives on nearby frames.
         refinement_window = 2.0
         exact_frame_result = find_exact_frame(
             video_path, target_dialogue, candidate_timestamp, source_type=source_type,
@@ -229,8 +214,6 @@ def main():
             console.print("[red]Refinement failed to lock onto a frame.[/red]")
 
     elif candidate_timestamp is not None and video_path is None:
-        # ── Target found in audio/subtitle but OCR was skipped or failed ──────────
-        # Emit the result directly.
         console.print(
             f"\n[bold yellow]> Skipping OCR refinement. "
             f"Using {source_type.title()} timestamp directly.[/bold yellow]"

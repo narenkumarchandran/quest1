@@ -1,18 +1,3 @@
-"""
-pipeline/subtitle_extractor.py
-────────────────────────────────
-Handles both embedded subtitle streams (via ffmpeg) and
-external subtitle files downloaded by yt-dlp (SRT/VTT).
-
-Detection priority:
-  1. Embedded subtitle stream in video container  → extract with ffmpeg
-  2. External .srt/.vtt file from yt-dlp download → parse directly
-  3. Neither found                                 → return None (fall through to OCR/Whisper)
-
-This is the FASTEST path in the pipeline — text-based subtitle search
-requires no frame decoding and is nearly instant even on long videos.
-"""
-
 import subprocess
 import re
 import srt
@@ -26,14 +11,12 @@ from utils.text_utils import srt_time_to_seconds, seconds_to_timestamp
 
 console = Console()
 
-
 @dataclass
 class SubtitleEntry:
     index: int
     start_sec: float
     end_sec: float
     text: str
-
 
 @dataclass
 class SubtitleSearchResult:
@@ -43,23 +26,12 @@ class SubtitleSearchResult:
     source: str = ""          # "embedded_stream" | "external_file"
     subtitle_file_path: str = ""
 
-
 def extract_embedded_subtitles(
     video_path: str,
     stream_index: int = 0,
     output_dir: str = "output",
 ) -> Optional[str]:
-    """
-    Use ffmpeg to extract an embedded subtitle stream to an SRT file.
-
-    Args:
-        video_path:    Path to the video file.
-        stream_index:  Index of the subtitle stream (usually 0).
-        output_dir:    Where to save the extracted .srt file.
-
-    Returns:
-        Path to the extracted .srt file, or None on failure.
-    """
+    
     out_path = Path(output_dir) / "extracted_subtitle.srt"
 
     console.print(
@@ -88,12 +60,8 @@ def extract_embedded_subtitles(
     console.print(f"[green]+ Subtitle extracted to:[/green] {out_path}")
     return str(out_path)
 
-
 def parse_srt_file(srt_path: str) -> List[SubtitleEntry]:
-    """
-    Parse an SRT file into a list of SubtitleEntry objects.
-    Handles both standard SRT and VTT (converted to SRT).
-    """
+    
     text = Path(srt_path).read_text(encoding="utf-8", errors="replace")
 
     # If this looks like a VTT file, pre-process it to SRT format
@@ -116,12 +84,8 @@ def parse_srt_file(srt_path: str) -> List[SubtitleEntry]:
 
     return entries
 
-
 def _vtt_to_srt(vtt_text: str) -> str:
-    """
-    Convert WebVTT format to SRT format for uniform parsing.
-    Handles the main differences: WEBVTT header, dot vs comma in timestamps.
-    """
+    
     lines = vtt_text.splitlines()
     # Remove WEBVTT header and metadata
     content_lines = []
@@ -151,23 +115,17 @@ def _vtt_to_srt(vtt_text: str) -> str:
 
     return "\n\n".join(lines_out)
 
-
 def search_subtitles(
     subtitle_entries: List[SubtitleEntry],
     target_dialogue: str,
     threshold: float = 75.0,
 ) -> Optional[SubtitleEntry]:
-    """
-    Search parsed subtitle entries for the target dialogue.
-
-    Returns the first entry that matches above the threshold, or None.
-    """
+    
     for entry in subtitle_entries:
         result = is_match(entry.text, target_dialogue, threshold)
         if result.is_match:
             return entry
     return None
-
 
 def run_subtitle_search(
     video_path: str,
@@ -177,24 +135,7 @@ def run_subtitle_search(
     output_dir: str = "output",
     threshold: float = 75.0,
 ) -> SubtitleSearchResult:
-    """
-    Main entry point for subtitle-based search.
-
-    Priority:
-      1. Embedded subtitle streams (extracted via ffmpeg)
-      2. External subtitle files (from yt-dlp)
-
-    Args:
-        video_path:              Path to the downloaded video.
-        subtitle_stream_indices: Indices of embedded subtitle streams (from inspector).
-        external_subtitle_paths: Paths to .srt/.vtt files from yt-dlp.
-        target_dialogue:         The dialogue line to search for.
-        output_dir:              Where to write extracted subtitle files.
-        threshold:               Minimum fuzzy match score (0–100).
-
-    Returns:
-        SubtitleSearchResult — found=True if a match was found.
-    """
+    
     # ── 1. Try embedded subtitle streams ─────────────────────────────────────
     for stream_idx in subtitle_stream_indices:
         srt_path = extract_embedded_subtitles(video_path, stream_idx, output_dir)

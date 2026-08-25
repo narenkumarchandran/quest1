@@ -1,15 +1,3 @@
-"""
-pipeline/downloader.py
-───────────────────────
-yt-dlp wrapper for targeted phased downloading (Audio-First Architecture).
-
-All files for a given video are stored in output/<video_title>/:
-  - <title>.mp4           (full video, if downloaded)
-  - <title>_segment.mp4  (targeted clip)
-  - extracted_audio.wav  (audio track for Whisper)
-  - <title>.en.srt       (subtitles)
-"""
-
 import subprocess
 import json
 import re
@@ -20,7 +8,6 @@ from rich.console import Console
 
 console = Console()
 
-
 @dataclass
 class DownloadResult:
     video_path: Optional[str] = None
@@ -30,11 +17,6 @@ class DownloadResult:
     has_external_subs: bool = False
     video_dir: Optional[str] = None   # per-movie subfolder
 
-
-# ── Shared yt-dlp base flags ──────────────────────────────────────────────────
-# --extractor-args youtube:player_client=android,web bypasses YouTube bot
-#   detection without needing cookies (works around Chrome v127+ DPAPI issue).
-# --force-ipv4 bypasses IPv6 blocks on platforms like OK.ru.
 _YTDLP_BASE = [
     "yt-dlp",
     "--force-ipv4",
@@ -42,28 +24,14 @@ _YTDLP_BASE = [
     "--js-runtimes", "node",
     "--no-playlist",
     "--extractor-args", "youtube:player_client=android,web",
-    # NOTE: do NOT add --quiet here; we capture stdout/stderr per-call
-    # so the user sees real error messages when something fails.
 ]
 
-
 def _safe_dirname(title: str) -> str:
-    """Strip characters invalid in Windows directory names."""
+    
     return re.sub(r'[\\/*?:"<>|\uff1a]', "_", title).strip()
 
-
 def _extract_video_id(url: str) -> str:
-    """
-    Extract a reliable, platform-specific video ID from a URL.
-    No network call required — pure string parsing.
-
-    Supported patterns:
-      YouTube:      youtu.be/<id>  or  youtube.com/watch?v=<id>
-      ok.ru:        ok.ru/video/<id>
-      Vimeo:        vimeo.com/<id>
-      Dailymotion:  dailymotion.com/video/<id>
-      Generic:      last path segment or query ?v=<id>
-    """
+    
     patterns = [
         # YouTube
         r"(?:youtu\.be/|youtube\.com/(?:watch\?v=|embed/|shorts/))([A-Za-z0-9_-]{11})",
@@ -88,17 +56,8 @@ def _extract_video_id(url: str) -> str:
     segment = parsed.path.rstrip("/").split("/")[-1]
     return segment or re.sub(r"[^A-Za-z0-9_-]", "_", url)[-40:]
 
-
 def _get_video_dir(url: str, base_output_dir: str) -> Path:
-    """
-    Get (or create) the per-movie subdirectory under base_output_dir.
-
-    Strategy: use the VIDEO ID extracted directly from the URL as the folder name.
-    This is 100% reliable and consistent — same URL always → same folder,
-    even on sites like ok.ru that block yt-dlp title fetching.
-
-    A meta.json is saved inside the folder so humans can identify what's in it.
-    """
+    
     video_id = _extract_video_id(url)
     video_dir = Path(base_output_dir) / video_id
     video_dir.mkdir(parents=True, exist_ok=True)
@@ -140,29 +99,26 @@ def _get_video_dir(url: str, base_output_dir: str) -> Path:
     console.print(f"[dim]> Working directory: {video_dir}  ({display_name})[/dim]")
     return video_dir
 
-
 def _find_existing_mp4(out_dir: Path, exclude_suffixes=("_segment",)) -> Optional[str]:
-    """Return the most recently modified full-video .mp4, ignoring segment files."""
+    
     candidates = sorted(out_dir.glob("*.mp4"), key=lambda f: f.stat().st_mtime, reverse=True)
     for f in candidates:
         if not any(f.stem.endswith(s) for s in exclude_suffixes):
             return str(f)
     return None
 
-
 def _find_existing_audio(out_dir: Path) -> Optional[str]:
-    """Return an existing pre-extracted audio (.wav) file if present."""
+    
     for pattern in ["extracted_audio.wav", "*_audio.wav"]:
         files = sorted(out_dir.glob(pattern), key=lambda f: f.stat().st_mtime, reverse=True)
         if files:
             return str(files[0])
     return None
 
-
 # ── Public Download Functions ─────────────────────────────────────────────────
 
 def download_subtitles_only(url: str, video_dir: Path) -> DownloadResult:
-    """Download only subtitle files for the given URL into a per-movie folder."""
+    
     console.print(f"[bold cyan]> Checking and downloading subtitles into:[/bold cyan] {video_dir.name}/")
 
     cmd = _YTDLP_BASE + [
@@ -190,15 +146,8 @@ def download_subtitles_only(url: str, video_dir: Path) -> DownloadResult:
         video_dir=str(video_dir)
     )
 
-
 def download_audio_only(url: str, video_dir: str) -> DownloadResult:
-    """
-    Obtain audio for Whisper into the per-movie folder.
-    Priority:
-      1. Reuse existing extracted_audio.wav (zero network)
-      2. Extract from existing full video via ffmpeg (zero network)
-      3. Download audio-only track from network
-    """
+    
     out_dir = Path(video_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -255,13 +204,8 @@ def download_audio_only(url: str, video_dir: str) -> DownloadResult:
     console.print(f"[green]+ Audio saved:[/green] {Path(audio_path).name}")
     return DownloadResult(audio_path=audio_path, video_dir=str(out_dir))
 
-
 def download_video_segment(url: str, start_sec: float, end_sec: float, video_dir: str) -> DownloadResult:
-    """
-    Download a targeted ~20-second clip around [start_sec, end_sec].
-    If the full video already exists in video_dir, return it directly (zero network).
-    If the site doesn't support range cuts, returns None video_path.
-    """
+    
     out_dir = Path(video_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -297,8 +241,6 @@ def download_video_segment(url: str, start_sec: float, end_sec: float, video_dir
             return DownloadResult(video_path=None, video_dir=str(out_dir))
 
     if result.returncode != 0:
-        # ── Segment download failed (site doesn't support range cuts). ───────────
-        # Return None so the pipeline skips visual OCR gracefully.
         err = (result.stderr or result.stdout or "").strip()
         reason = f": {err[:200]}" if err else ""
         console.print(f"[yellow]! Segment download failed (site may not support range cuts){reason}[/yellow]")
@@ -317,9 +259,8 @@ def download_video_segment(url: str, start_sec: float, end_sec: float, video_dir
     console.print(f"[green]+ Segment saved:[/green] {Path(video_path).name}")
     return DownloadResult(video_path=video_path, video_dir=str(out_dir))
 
-
 def download_full_video_fallback(url: str, video_dir: str) -> DownloadResult:
-    """Download the complete video into the per-movie folder (last resort)."""
+    
     out_dir = Path(video_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
