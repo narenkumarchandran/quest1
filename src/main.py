@@ -51,10 +51,14 @@ def _slugify(text: str, max_len: int = 60) -> str:
 
 
 def main():
+    # Anchor the default output directory to the project root (one level up from src/)
+    project_root = Path(__file__).resolve().parent.parent
+    default_output = str(project_root / "output")
+
     parser = argparse.ArgumentParser(description="Hybrid Video Dialogue Detector")
     parser.add_argument("--url", required=True, help="Video URL to analyze")
     parser.add_argument("--target", required=True, help="Target dialogue to find")
-    parser.add_argument("--output", default="output", help="Output directory")
+    parser.add_argument("--output", default=default_output, help="Output directory")
     parser.add_argument("--threshold", type=float, default=75.0, help="Fuzzy match threshold")
     parser.add_argument("--whisper-model", default="base", help="Whisper model size")
     parser.add_argument("--fast-mode", action="store_true", help="Skip visual OCR refinement for spoken dialogue (faster on CPU)")
