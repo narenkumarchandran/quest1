@@ -32,7 +32,6 @@ from pipeline.subtitle_extractor import run_subtitle_search
 from pipeline.audio_transcriber import transcribe_and_search
 from pipeline.ocr_engine import coarse_ocr_scan
 from pipeline.frame_finder import find_exact_frame
-from pipeline.confidence import calculate_confidence
 from utils.text_utils import seconds_to_timestamp
 
 import re
@@ -48,6 +47,33 @@ def _slugify(text: str, max_len: int = 60) -> str:
     text = re.sub(r"[^\w\s-]", "", text)   # remove punctuation
     text = re.sub(r"[\s-]+", "_", text)    # spaces/dashes -> underscore
     return text[:max_len].strip("_")
+
+
+def _get_fps_fallback(video_path: str, url: str) -> float:
+    """Attempt to get the video FPS from the local file or via yt-dlp."""
+    if video_path and os.path.exists(video_path):
+        try:
+            from utils.video_utils import get_video_info
+            info = get_video_info(video_path)
+            if info.get("fps"):
+                return float(info["fps"])
+        except Exception:
+            pass
+
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["yt-dlp", "--print", "%(fps)s", "--no-download", url],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            fps_str = result.stdout.strip()
+            if fps_str and fps_str != "None":
+                return float(fps_str)
+    except Exception:
+        pass
+
+    return 25.0
 
 
 def main():
@@ -180,28 +206,15 @@ def main():
             if exact_frame_result.is_visual:
                 visual_match_score = max(visual_match_score, exact_frame_result.match_result.score)
 
-            conf = calculate_confidence(
-                source_type=source_type,
-                visual_match_score=visual_match_score,
-                spoken_match_score=spoken_match_score,
-                timestamp_agreement=(source_type == "fusion"),
-                consecutive_frames=True if exact_frame_result.is_visual else False,
-            )
-
             output_data = {
                 "status": "success",
                 "detection_type": "visual_text" if exact_frame_result.is_visual else "spoken_dialogue",
                 "timestamp": seconds_to_timestamp(exact_frame_result.timestamp_sec),
-                "frame_number": exact_frame_result.frame_number if exact_frame_result.frame_number >= 0 else None,
+                "frame_number": exact_frame_result.frame_number if exact_frame_result.frame_number >= 0 else int(exact_frame_result.timestamp_sec * _get_fps_fallback(video_path, url)),
                 "dialogue_text": exact_frame_result.text,
                 "similarity_score": exact_frame_result.match_result.score,
-                "confidence": {
-                    "score": conf.score,
-                    "level": conf.level,
-                    "signals": conf.signals
-                },
                 "frame_image_path": exact_frame_result.frame_image_path,
-                "source": source_type,
+                "tool_used": "whisper, ocr" if source_type == "fusion" else source_type,
                 "video_dir": video_dir,
             }
 
@@ -222,27 +235,15 @@ def main():
             f"\n[bold yellow]> Skipping OCR refinement. "
             f"Using {source_type.title()} timestamp directly.[/bold yellow]"
         )
-        conf = calculate_confidence(
-            source_type=source_type,
-            visual_match_score=0.0,
-            spoken_match_score=spoken_match_score,
-            timestamp_agreement=False,
-            consecutive_frames=False,
-        )
         output_data = {
             "status": "success",
             "detection_type": "spoken_dialogue",
             "timestamp": seconds_to_timestamp(candidate_timestamp),
-            "frame_number": None,
+            "frame_number": int(candidate_timestamp * _get_fps_fallback(video_path, url)),
             "dialogue_text": target_dialogue,
             "similarity_score": spoken_match_score,
-            "confidence": {
-                "score": conf.score,
-                "level": conf.level,
-                "signals": conf.signals
-            },
             "frame_image_path": None,
-            "source": source_type,
+            "tool_used": "whisper, ocr" if source_type == "fusion" else source_type,
             "video_dir": video_dir,
         }
         result_path = os.path.join(video_dir, f"{_slugify(target_dialogue)}.json")

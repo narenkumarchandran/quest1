@@ -2,6 +2,4 @@ error.log
 output/
 __pycache__/
 *.pyc
-.env
-.venv/
-venv/
+prompts.txt
