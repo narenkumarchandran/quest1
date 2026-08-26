@@ -3,6 +3,12 @@
 ## 1. Overview
 This system implements an efficient "Audio-First" phased architecture to identify the exact frame where a specific target dialogue appears in an online video. It minimizes bandwidth and computational cost by intelligently scaling its methods from lightweight text searches to heavy optical character recognition (OCR) based on a strict fallback chain.
 
+### Demo Video
+
+<video src="./assets/Demo_video.mp4" controls="controls" style="max-width: 100%;">
+  Your browser does not support the video tag.
+</video>
+
 ## 2. Full Logic and Flowchart Diagram
 The pipeline uses the following step-by-step logic, visualized in the flowchart below:
 

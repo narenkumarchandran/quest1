@@ -5,6 +5,12 @@ A resource-efficient multimodal pipeline, multi-modal pipeline designed to find 
 - **Spoken Audio** (via GPU-accelerated `faster-whisper`)
 - **Visual Scene Text** (via `EasyOCR`)
 
+## Demo Video
+
+<video src="./assets/Demo_video.mp4" controls="controls" style="max-width: 100%;">
+  Your browser does not support the video tag.
+</video>
+
 ## How It Works (The Pipeline)
 
 The pipeline prioritizes speed and efficiency by following a strict "Audio-First" fallback chain. We avoid downloading massive video files unless strictly necessary:
