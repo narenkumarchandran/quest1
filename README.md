@@ -39,6 +39,21 @@ If the text is not found visually on screen (i.e., it's a spoken dialogue), the 
 
 *(Note: Depending on your CUDA version, you may need to install a specific version of PyTorch manually for full GPU acceleration).*
 
+## Docker Usage
+
+The easiest way to run the pipeline without installing local dependencies (like `ffmpeg`, Python, or system libraries) is to use the pre-built Docker container. It is automatically published to the GitHub Container Registry whenever a new release is created.
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/narenkumarchandran/quest1:latest
+
+# Run the container (example)
+docker run -it --rm \
+  -v $(pwd)/output:/app/output \
+  ghcr.io/narenkumarchandran/quest1:latest --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type of person"
+```
+*(Note: We use `-v $(pwd)/output:/app/output` to map the container's output folder to your local machine so you can view the extracted screenshots and JSON files.)*
+
 ## Testing
 
 The project includes a comprehensive unit testing suite built with `pytest`. It covers fuzzy text matching, timestamp manipulation, and video metadata extraction (without needing to download heavy videos during the test).
