@@ -16,17 +16,22 @@ class DownloadResult:
     platform_info: dict = field(default_factory=dict)
     has_external_subs: bool = False
     video_dir: Optional[str] = None   # per-movie subfolder
-
-_YTDLP_BASE = [
+_YTDLP_BASE_CORE = [
     "yt-dlp",
-    "--impersonate", "chrome",
-    "--cookies-from-browser", "firefox",
     "--force-ipv4",
     "--no-check-certificates",
     "--js-runtimes", "node",
     "--no-playlist",
     "--extractor-args", "youtube:player_client=android,web",
 ]
+
+ENABLE_COOKIES = False
+
+def _get_ytdlp_base() -> List[str]:
+    base = _YTDLP_BASE_CORE.copy()
+    if ENABLE_COOKIES:
+        base.extend(["--cookies-from-browser", "firefox"])
+    return base
 
 def _safe_dirname(title: str) -> str:
     
@@ -49,7 +54,19 @@ def _extract_video_id(url: str) -> str:
         if m:
             return m.group(1)
 
-    # Generic fallback: last non-empty path segment or ?v= query param
+    # Generic fallback: ask yt-dlp directly for the ID
+    import subprocess
+    try:
+        cmd = _get_ytdlp_base() + ["--print", "%(id)s", "--no-download", "--quiet", "--no-warnings", url]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        if result.returncode == 0:
+            extracted_id = result.stdout.strip().splitlines()[0]
+            if extracted_id:
+                return extracted_id
+    except Exception:
+        pass
+
+    # Last resort fallback if yt-dlp fails
     from urllib.parse import urlparse, parse_qs
     parsed = urlparse(url)
     qs = parse_qs(parsed.query)
@@ -80,7 +97,7 @@ def _get_video_dir(url: str, base_output_dir: str) -> Path:
     if not meta["title"]:
         try:
             result = subprocess.run(
-                _YTDLP_BASE + ["--print", "%(title)s", "--no-download",
+                _get_ytdlp_base() + ["--print", "%(title)s", "--no-download",
                                "--quiet", "--no-warnings", url],
                 capture_output=True, text=True, encoding="utf-8",
                 errors="replace", timeout=10,
@@ -122,7 +139,7 @@ def download_subtitles_only(url: str, video_dir: Path) -> DownloadResult:
     
     console.print(f"[bold cyan]> Checking and downloading subtitles into:[/bold cyan] {video_dir.name}/")
 
-    cmd = _YTDLP_BASE + [
+    cmd = _get_ytdlp_base() + [
         "--skip-download", "--write-sub", "--write-auto-sub",
         "--sub-format", "srt/vtt/best",
         "--sub-langs", "en,en-US,en-GB",
@@ -177,7 +194,7 @@ def download_audio_only(url: str, video_dir: str) -> DownloadResult:
 
     # Download audio track from network
     output_template = str(out_dir / "%(title)s_audio.%(ext)s")
-    cmd = _YTDLP_BASE + [
+    cmd = _get_ytdlp_base() + [
         "-f", "bestaudio[ext=m4a]/bestaudio/worst",
         "--extract-audio", "--audio-format", "wav",
         "--quiet", "--no-warnings",
@@ -226,7 +243,7 @@ def download_video_segment(url: str, start_sec: float, end_sec: float, video_dir
     end_str = fmt_time(end_sec)
     output_template = str(out_dir / "%(title)s_segment.%(ext)s")
 
-    cmd = _YTDLP_BASE + [
+    cmd = _get_ytdlp_base() + [
         "-f", "bestvideo[vcodec^=avc]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best",
         "--merge-output-format", "mp4",
         "--download-sections", f"*{start_str}-{end_str}",
@@ -272,7 +289,7 @@ def download_full_video_fallback(url: str, video_dir: str) -> DownloadResult:
 
     output_template = str(out_dir / "%(title)s.%(ext)s")
     output_template = str(out_dir / "%(title)s.%(ext)s")
-    cmd = _YTDLP_BASE + [
+    cmd = _get_ytdlp_base() + [
         "-f", "bestvideo[vcodec^=avc]+bestaudio[ext=m4a]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best",
         "--merge-output-format", "mp4",
         "-o", output_template, url

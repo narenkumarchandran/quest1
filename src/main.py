@@ -111,8 +111,13 @@ def _run_main():
     parser.add_argument("--fast-mode", action="store_true", help="Skip visual OCR refinement for spoken dialogue (faster on CPU)")
     parser.add_argument("--gpu", action="store_true", help="Enable GPU acceleration for OCR and Whisper")
     parser.add_argument("--disable-subs", action="store_true", help="Ignore subtitles to force testing of Whisper and OCR fallbacks")
+    parser.add_argument("--cookies", action="store_true", help="Use browser cookies for yt-dlp (required for age-restricted or private videos)")
 
     args = parser.parse_args()
+
+    if args.cookies:
+        import pipeline.downloader
+        pipeline.downloader.ENABLE_COOKIES = True
 
     url = args.url
     target_dialogue = args.target

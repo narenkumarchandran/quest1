@@ -59,7 +59,7 @@ During the design phase, we considered two primary alternatives that were ultima
    - **Why it was rejected**: This approach completely fails for non-spoken dialogue (e.g., visual signs, on-screen text, burned-in subtitles in a foreign language). It also fails to provide the exact visual frame where text appears (which can differ slightly from the audio start time). The current system's "Fusion" step solves this by verifying visually on a short 20s clip.
 
 ## 6. Tools Used & Why
-- **yt-dlp (>=2024.1.1)**: Used to efficiently download metadata, subtitles, audio-only tracks, and specific targeted video segments without downloading the entire file. The specific version ensures the latest fixes for frequent YouTube extractor breaking changes.
+- **yt-dlp (>=2024.1.1)**: Used to efficiently download metadata, subtitles, audio-only tracks, and specific targeted video segments without downloading the entire file. The pipeline includes a dynamic `--cookies` fallback strategy to optionally pass browser cookies for age-restricted/private videos, bypassing aggressive anti-bot JS challenges without breaking standard requests.
 - **faster-whisper (>=1.0.0)**: An optimized implementation of OpenAI's Whisper model. Used for audio transcription due to its superior speed and accuracy compared to standard Whisper. Version 1.0.0+ is required for stable CTranslate2 integration and robust CUDA/GPU optimizations.
 - **EasyOCR (>=1.7.1)**: A robust optical character recognition tool. Used to visually scan frames and detect burned-in scene text. This version provides stable support for PyTorch 2.x and updated text detection models.
 - **opencv-python (>=4.9.0)**: Used for reading video streams and extracting individual frames. This version includes the latest stability improvements for `cv2.VideoCapture` and the ffmpeg backend.
@@ -97,6 +97,9 @@ python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type o
 
 # GPU Accelerated Run
 python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type of person" --gpu
+
+# Bypassing Age/Login Restrictions (Requires Firefox)
+python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type of person" --cookies
 ```
 ## Output Format
 

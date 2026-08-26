@@ -66,6 +66,7 @@ python src/main.py --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type o
 - `--threshold`: The fuzzy match confidence threshold (default: `75.0`).
 - `--fast-mode`: Skip the final visual OCR refinement if the dialogue was matched via spoken audio.
 - `--disable-subs`: Force the pipeline to ignore fast subtitle matching and test the Whisper/OCR fallback pathways.
+- `--cookies`: Use browser cookies (Firefox) to bypass age restrictions or login walls when downloading with `yt-dlp`.
 - `--output`: Custom output directory (default is `./output`).
 
 ## Output Format
