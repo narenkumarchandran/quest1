@@ -1,0 +1,182 @@
+
+Project: Video Dialogue Frame Detection Pipeline
+
+1. PROBLEM FRAMING & REQUIREMENT ANALYSIS
+- "Given a target line of dialogue and a public video URL, what is the most
+  reliable way to programmatically determine the exact frame at which that
+  dialogue first appears, without manual review?"
+- "Enumerate the fully-automated approaches to this problem and identify why
+  each fails to deliver frame-level precision."
+- "Specifically evaluate a VLM + OCR pipeline as a candidate architecture and
+  identify its failure boundary."
+- "Is caption-track metadata alone ever sufficient, or does it need to be
+  paired with a secondary verification signal?"
+- "Propose a routing architecture that only escalates to expensive AI
+  inference (Whisper / OCR) when cheap metadata inspection is insufficient."
+- "Clarify how frame_number relates to timestamp and fps, and where
+  rounding errors could creep in."
+- "Should subtitle, audio, and OCR signals be treated as competing methods
+  or as complementary localization signals?"
+- "Consolidate the full architectural discussion into a single self-contained
+  specification that can be handed to a fresh implementation session."
+
+2. SYSTEM ARCHITECTURE & DESIGN APPROACH
+- "Given that GPU compute is available, revise the plan to use a larger
+  local Whisper model instead of a hosted ASR API."
+- "Select between Tesseract and EasyOCR based on accuracy and integration
+  fit for this pipeline."
+- "Implement the agreed plan end-to-end using yt-dlp, faster-whisper,
+  EasyOCR, RapidFuzz, and ffmpeg."
+- "Avoid downloading a multi-hour source video in full — propose a
+  chunked/segment download strategy instead."
+- "Once a subtitle or audio match is found, does the pipeline still need to
+  run visual OCR verification, or can it be skipped?"
+- "Derive and implement the mathematical fallback for computing a frame
+  index directly from a timestamp when OCR isn't possible."
+- "Design a confidence-scoring model that reflects how a result was
+  obtained rather than a single opaque score."
+- "Should the pipeline retry a failed stage automatically, or fail fast and
+  surface the error to the caller?"
+- "Review the full project directory against the original problem statement
+  and confirm every requirement is satisfied."
+- "Produce a complete flowchart of the finalized pipeline, and revise its
+  readability for review."
+- "Should segment download and full download share the same code path, or
+  be kept as separate functions?"
+
+3. TOOLING, LIBRARY VERSIONS & RATIONALE
+- "For each library in requirements.txt, document what it's used for and
+  justify the minimum version pinned."
+- "Document the alternative approaches evaluated and explicitly not
+  implemented, and why."
+- "Is faster-whisper's CTranslate2 backend worth the extra install
+  complexity over vanilla openai-whisper?"
+- "Compare RapidFuzz against Python's difflib for noisy OCR/ASR text
+  matching."
+- "Should ffmpeg be invoked via a Python binding or as raw subprocess
+  calls?"
+- "Justify pinning numpy<2 given the current torch/torchvision build."
+
+4. DEBUGGING & ISSUE RESOLUTION
+4.1 Source download / extractor failures
+- "The downloader is failing against this Odnoklassniki URL with an
+  SSL/connection error — network issue or extractor-level problem?"
+- "Multiple distinct YouTube extraction failures are occurring (missing JS
+  runtime, rate limiting, cookie decryption) — transient vs. configuration
+  gap?"
+- "yt-dlp succeeds on one platform but times out on another — should the
+  timeout be global or per-extractor?"
+- "Should a failed segment download silently fall back to full download, or
+  surface the failure first?"
+
+4.2 GPU / CUDA / dependency version conflicts
+- "Determine the correct CUDA-matched PyTorch wheel and resolve the cuDNN
+  symbol load failure."
+- "PyTorch >= 2.4 required but found 2.3.1+cu121 — reinstall or downgrade
+  transformers?"
+- "This is a NumPy ABI incompatibility, not an EasyOCR logic error — pin
+  NumPy to a compatible 1.x release."
+- "Should the pipeline detect GPU availability at runtime and fall back to
+  CPU automatically, or require it explicitly?"
+
+4.3 Memory / resource exhaustion
+- "The audio segment passed to Whisper is too long for available memory —
+  smaller model, shorter window, or lower precision?"
+- "Explain the CUDA OOM during OCR refinement — is this from
+  re-initializing the reader per frame?"
+- "Should the OCR reader be instantiated once and reused, or recreated per
+  call?"
+
+4.4 Detection accuracy & matching-logic defects
+- "The subtitle file contains an exact match further down the file, but the
+  pipeline returns an earlier, lower-similarity candidate — correct the
+  selection criterion."
+- "Confirm whether subtitle -> Whisper -> OCR run in
+  sequence-with-early-exit or are all executing unconditionally."
+- "OCR is returning the full text detected in the frame region rather than
+  isolating the matched target phrase."
+- "The reported timestamp reflects offset-within-segment rather than
+  offset-within-source."
+- "The refinement window can go negative for candidates near the start of
+  the video."
+- "If a subtitle match is found, the pipeline should still resolve and
+  persist the corresponding frame image."
+- "For a known ambiguous case ('blue pill' vs. 'red pill'), why did the
+  pipeline pick the wrong line despite an exact match existing?"
+- "Should fuzzy-match threshold be a fixed constant or configurable per
+  run?"
+
+4.5 File/folder structure & output layout
+- "Propose a stable output-directory naming scheme keyed on the video's
+  platform ID rather than its sometimes-unresolvable title."
+- "Document explicitly where every artifact for a run is persisted, and
+  update the JSON schema examples accordingly."
+- "Should intermediate artifacts (raw audio, temp clips) be deleted after a
+  run, or retained for debugging?"
+
+4.6 Robustness / error handling
+- "The system should never exit with an unhandled traceback — implement a
+  consistent error-handling contract across the whole application."
+- "Should a bad CLI argument produce a structured JSON error or a plain
+  usage message?"
+- "Normalize KeyboardInterrupt into the same error contract as other
+  failures."
+
+5. DOCUMENTATION & REPOSITORY HYGIENE
+- "Rewrite approach.txt as a complete explanation of the system's logic and
+  flow, including a flowchart."
+- "Convert the approach document to Markdown, embed the flowchart image,
+  and add a tools-used-and-why section."
+- "Add run instructions for a new user, assuming no prior context."
+- "Add a Future Enhancements section covering multilingual support,
+  alternative OCR backends, parallelized frame processing, and a GUI/API
+  front end."
+- "Structure the repository with source under src/ and non-code artifacts
+  outside it."
+- "Verify all internal file-path references still resolve correctly after
+  the directory restructure."
+- "Initialize version control with an incremental, readable commit history
+  rather than a single bulk commit."
+- "Add a .gitignore excluding generated logs and sample run output."
+- "Write a README summarizing the project for a first-time reader."
+- "Remove excess inline comments, keeping only single-line comments on
+  non-obvious logic, without altering behavior."
+- "Use a commit message describing the comment cleanup as a code-clarity
+  pass rather than a functional change."
+- "Reduce the reported result schema to reference which detection tool
+  produced the match, rather than exposing internal numeric confidence
+  signals."
+
+6. TESTING & VALIDATION
+- "Provide additional public test videos covering each branch of the
+  design: native subtitles, pure audio transcription, and burned-in visual
+  text OCR."
+- "For a case where Whisper locates spoken dialogue but OCR finds no
+  corresponding visual text, confirm the pipeline reports this as a
+  spoken-only detection rather than silently failing."
+- "Cross-check a low ASR confidence score and confirm whether it reflects
+  genuine audio ambiguity versus a language-detection artifact."
+- "Run the pipeline against a video with no subtitle track at all and
+  confirm graceful fallback to audio transcription."
+- "Run the pipeline against a low-resolution, low-fps source and confirm
+  the frame-number math still holds."
+- "Deliberately feed a target phrase that does not exist anywhere in the
+  video and confirm the pipeline returns a clear no-match result instead of
+  a false positive."
+- "for youtube videos do we checking the transcripts ? only subtitle"
+  Challenge: Clarifying if the system relies solely on metadata or checks generated transcripts.
+  Resolution: Confirmed the hybrid approach where Whisper transcript generation acts as a fallback if fast subtitle extraction fails.
+- "for users who dont have the gpu but the input video file requires whisper model to run in that case they can use googel colab like that cloud provider" -> "add this in the approach and readme"
+  Challenge: Heavy compute requirements (`faster-whisper`, `EasyOCR`) alienate users without local GPUs.
+  Resolution: Updated `README.md` and `approach.md` to formally recommend running the pipeline on cloud providers (like Google Colab or Kaggle) utilizing free GPU tiers.
+- "Explain the error(on Dailymotion ConnectionResetError 10054)"
+  Challenge: Dailymotion's aggressive anti-bot firewall (Cloudflare) was blocking `yt-dlp` requests from automated IPs.
+  Resolution: Identified the block and instructed the installation of `curl_cffi` to enable browser TLS impersonation.
+  Challenge: `yt-dlp` required explicit flags to activate impersonation, which wasn't exposed in the `main.py` CLI.
+  Resolution: Modified `src/pipeline/downloader.py` to hardcode `--impersonate chrome` directly into `_YTDLP_BASE`.
+- "https://vimeo.com/92760926... The web client only works when logged-in" -> "add it" (Adding cookies support)
+  Challenge: Age-restricted or private videos on Vimeo were blocking anonymous downloads, and Windows DPAPI blocked reading cookies from Chromium browsers.
+  Resolution: Added `--cookies-from-browser firefox` to `_YTDLP_BASE` to bypass authentication walls using the local Firefox session without triggering DPAPI encryption errors.
+- what are the upgrading way for `_extract_video_id()` to use `yt-dlp --print id` as a dynamic fallback 
+  for unsupported domains, replacing the fragile generic URL parser while keeping 
+  instant regex matching for major platforms.
