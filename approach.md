@@ -124,13 +124,13 @@ Example Executions & Outputs:
 {
   "status": "success",
   "detection_type": "visual_text",
-  "timestamp": "00:00:08.640",
-  "frame_number": 216,
-  "dialogue_text": "nice jewish girl, god fearing",
-  "similarity_score": 100.0,
-  "frame_image_path": "C:\\Quest1\\output\\92760926\\frame_216.png",
+  "timestamp": "00:02:09.720",
+  "frame_number": 3243,
+  "dialogue_text": "I'm the type of person",
+  "similarity_score": 90.68,
+  "frame_image_path": "C:\\Quest1\\output\\iXZ1jeTCU-o\\frame_3243.png",
   "tool_used": "ocr",
-  "video_dir": "C:\\Quest1\\output\\92760926"
+  "video_dir": "C:\\Quest1\\output\\iXZ1jeTCU-o"
 }
 ```
 
