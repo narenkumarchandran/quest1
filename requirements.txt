@@ -1,24 +1,24 @@
-# ── Video acquisition ─────────────────────────────────────────────────────────
+#Video acquisition
 yt-dlp>=2024.1.1
 
-# ── Speech recognition (local, GPU) ───────────────────────────────────────────
+# Speech recognition (local, GPU) 
 faster-whisper>=1.0.0
 
-# ── OCR (GPU-accelerated, deep-learning) ──────────────────────────────────────
+# OCR (GPU-accelerated, deep-learning)
 easyocr>=1.7.1
 
-# ── Video / frame processing ──────────────────────────────────────────────────
+# Video / frame processing
 opencv-python>=4.9.0
 Pillow>=10.2.0
 numpy>=1.26.0
 
-# ── Text matching ─────────────────────────────────────────────────────────────
+# Text matching 
 rapidfuzz>=3.6.1
 
-# ── CLI output ────────────────────────────────────────────────────────────────
+# CLI output
 rich>=13.7.0
 
-# ── SRT / subtitle parsing ────────────────────────────────────────────────────
+# SRT/subtitle parsing 
 srt>=3.5.3
 
 # NOTE: ffmpeg and ffprobe must be installed as system tools and available on PATH.
