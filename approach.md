@@ -160,7 +160,7 @@ Example Executions & Outputs:
   },
   "frame_image_path": "",
   "source": "whisper",
-  "video_dir": "C:\\Users\\naren\\Desktop\\Quest1\\output\\248244667877"
+  "video_dir": "C:\\Quest1\\output\\248244667877"
 }
 ```
 
