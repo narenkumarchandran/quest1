@@ -1,6 +1,6 @@
 # Hybrid Video Dialogue Detector
 
-A highly optimized, multi-modal pipeline designed to find the exact frame and timestamp where a specific target dialogue appears in a video. It is built to seamlessly handle multiple sources of dialogue while minimizing bandwidth and processing time:
+A resource-efficient multimodal pipeline, multi-modal pipeline designed to find the exact frame and timestamp where a specific target dialogue appears in a video. It is built to seamlessly handle multiple sources of dialogue while minimizing bandwidth and processing time:
 - **Embedded/External Subtitles** (`.srt`, `.vtt`)
 - **Spoken Audio** (via GPU-accelerated `faster-whisper`)
 - **Visual Scene Text** (via `EasyOCR`)
@@ -103,3 +103,7 @@ Example JSON output:
   "video_dir": "C:\\Users\\name\\output\\zE7PKRjrid4"
 }
 ```
+## License
+
+This project is licensed under the Apache License 2.0.
+See the [LICENSE](LICENSE) file for details.
