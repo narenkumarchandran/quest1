@@ -5,10 +5,6 @@ A resource-efficient multimodal pipeline, multi-modal pipeline designed to find 
 - **Spoken Audio** (via GPU-accelerated `faster-whisper`)
 - **Visual Scene Text** (via `EasyOCR`)
 
-## Demo Video
-
-▶️ [**Click here to watch the Demo Video**](https://github.com/narenkumarchandran/quest1/raw/main/assets/Demo_video.mp4)
-
 ## How It Works (The Pipeline)
 
 The pipeline prioritizes speed and efficiency by following a strict "Audio-First" fallback chain. We avoid downloading massive video files unless strictly necessary:
@@ -175,6 +171,9 @@ Example Executions & Outputs:
   "video_dir": "C:\\Quest1\\output\\248244667877"
 }
 ```
+## Demo Video
+
+[**Click here to watch the Demo Video**](https://github.com/narenkumarchandran/quest1/raw/main/assets/Demo_video.mp4)
 
 ## License
 
