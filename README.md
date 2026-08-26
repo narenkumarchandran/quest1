@@ -47,7 +47,13 @@ The easiest way to run the pipeline without installing local dependencies (like 
 # Pull the latest image
 docker pull ghcr.io/narenkumarchandran/quest1:latest
 
-# Run the container (example)
+# Run the Web Interface (Frontend UI)
+docker run -it --rm \
+  -p 8000:8000 \
+  -v $(pwd)/output:/app/output \
+  ghcr.io/narenkumarchandran/quest1:latest web
+
+# Or run the standard CLI (example)
 docker run -it --rm \
   -v $(pwd)/output:/app/output \
   ghcr.io/narenkumarchandran/quest1:latest --url "https://youtu.be/iXZ1jeTCU-o" --target "I'm the type of person"
@@ -71,6 +77,16 @@ Run the pipeline from the project root by targeting `src/main.py`.
 ```bash
 python src/main.py --url "<VIDEO_URL>" --target "<TARGET_DIALOGUE>" [OPTIONS]
 ```
+
+### Web Interface (Frontend UI)
+The project includes a modern, responsive web interface built with FastAPI. To start the server and run the frontend:
+
+```bash
+uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
+```
+Then, open your web browser and navigate to: **[http://localhost:8000](http://localhost:8000)**
+
+From the web interface, you can input a video URL, target dialogue, select processing modes (With GPU / Without GPU), configure advanced options, and view the final matched frame seamlessly.
 
 ### Examples
 

@@ -17,7 +17,7 @@ from pipeline.downloader import (
     download_subtitles_only,
     download_audio_only,
     download_video_segment,
-    download_full_video_fallback,
+    get_video_duration,
     _get_video_dir,
 )
 from pipeline.inspector import inspect_video
@@ -63,6 +63,38 @@ def _get_fps_fallback(video_path: str, url: str) -> float:
         pass
 
     return 25.0
+
+def _calculate_confidence(source_type, visual_score, spoken_score):
+    subtitle_match = (source_type == "subtitle")
+    ocr_strong = (visual_score >= 90.0)
+    ocr_moderate = (70.0 <= visual_score < 90.0)
+    spoken_strong = (spoken_score >= 80.0)
+    
+    score = 0
+    if subtitle_match: score += 40
+    if ocr_strong: score += 40
+    if ocr_moderate: score += 20
+    if spoken_strong: score += 15
+    
+    if score >= 60:
+        level = "HIGH"
+    elif score >= 30:
+        level = "MEDIUM"
+    else:
+        level = "LOW"
+        
+    return {
+        "score": score,
+        "level": level,
+        "signals": {
+            "subtitle_match": subtitle_match,
+            "ocr_strong": ocr_strong,
+            "ocr_moderate": ocr_moderate,
+            "spoken_strong": spoken_strong,
+            "timestamp_agreement": False,
+            "consecutive_frames": False
+        }
+    }
 
 class JSONErrorArgumentParser(argparse.ArgumentParser):
     def error(self, message):
@@ -196,23 +228,41 @@ def _run_main():
                 )
 
     elif candidate_timestamp is None:
-        # ── Step 4: Full Video OCR Fallback ───────────────────────────────────
-        console.print("\n[bold yellow]Target not found in audio. Falling back to Full Video OCR scan...[/bold yellow]\n")
-
-        vid_dl = download_full_video_fallback(url, video_dir=video_dir)
-        video_path = vid_dl.video_path
-
-        if video_path:
-            # Full-video fallback: segment_start_sec = 0 (timestamps are already absolute)
-            ocr_candidate = coarse_ocr_scan(
-                video_path, target_dialogue, sample_fps=1.0, threshold=threshold, gpu=args.gpu,
-                segment_start_sec=0.0,
-            )
-            if ocr_candidate:
-                visual_match_score = ocr_candidate.match_result.score
-                candidate_timestamp = ocr_candidate.timestamp_sec
-                source_type = "ocr"
-                segment_start_sec = 0.0
+        console.print("\n[bold yellow]Target not found in audio/subtitles. Falling back to sequential chunk-by-chunk OCR scan...[/bold yellow]\n")
+        duration = get_video_duration(url)
+        if duration <= 0:
+            console.print("[red]Could not determine video duration. Skipping chunked OCR.[/red]")
+        else:
+            chunk_size = 60.0
+            start_sec = 0.0
+            while start_sec < duration:
+                end_sec = min(start_sec + chunk_size, duration)
+                console.print(f"\n[bold cyan]> Scanning chunk [{seconds_to_timestamp(start_sec)} - {seconds_to_timestamp(end_sec)}]...[/bold cyan]")
+                
+                vid_dl = download_video_segment(url, start_sec, end_sec, video_dir=video_dir)
+                chunk_path = vid_dl.video_path
+                
+                if chunk_path:
+                    ocr_candidate = coarse_ocr_scan(
+                        chunk_path, target_dialogue, sample_fps=1.0, threshold=threshold, gpu=args.gpu,
+                        segment_start_sec=start_sec,
+                    )
+                    
+                    if ocr_candidate:
+                        visual_match_score = ocr_candidate.match_result.score
+                        candidate_timestamp = ocr_candidate.timestamp_sec
+                        source_type = "ocr"
+                        segment_start_sec = start_sec
+                        video_path = chunk_path
+                        console.print(f"[green]+ Match found in this chunk at {seconds_to_timestamp(candidate_timestamp)}![/green]")
+                        break
+                    
+                    try:
+                        os.remove(chunk_path)
+                    except Exception:
+                        pass
+                
+                start_sec += chunk_size
 
     # ── Step 5: Temporal Refinement ────────────────────────────────────────────
     if candidate_timestamp is not None and video_path is not None:
@@ -228,6 +278,7 @@ def _run_main():
             if exact_frame_result.is_visual:
                 visual_match_score = max(visual_match_score, exact_frame_result.match_result.score)
 
+            conf = _calculate_confidence(source_type, visual_match_score, spoken_match_score)
             output_data = {
                 "status": "success",
                 "detection_type": "visual_text" if exact_frame_result.is_visual else "spoken_dialogue",
@@ -235,8 +286,9 @@ def _run_main():
                 "frame_number": exact_frame_result.frame_number if exact_frame_result.frame_number >= 0 else int(exact_frame_result.timestamp_sec * _get_fps_fallback(video_path, url)),
                 "dialogue_text": exact_frame_result.text,
                 "similarity_score": exact_frame_result.match_result.score,
-                "frame_image_path": exact_frame_result.frame_image_path,
-                "tool_used": "whisper, ocr" if source_type == "fusion" else source_type,
+                "confidence": conf,
+                "frame_image_path": exact_frame_result.frame_image_path or "",
+                "source": "whisper, ocr" if source_type == "fusion" else source_type,
                 "video_dir": video_dir,
             }
 
@@ -255,6 +307,7 @@ def _run_main():
             f"\n[bold yellow]> Skipping OCR refinement. "
             f"Using {source_type.title()} timestamp directly.[/bold yellow]"
         )
+        conf = _calculate_confidence(source_type, visual_match_score, spoken_match_score)
         output_data = {
             "status": "success",
             "detection_type": "spoken_dialogue",
@@ -262,8 +315,9 @@ def _run_main():
             "frame_number": int(candidate_timestamp * _get_fps_fallback(video_path, url)),
             "dialogue_text": target_dialogue,
             "similarity_score": spoken_match_score,
-            "frame_image_path": None,
-            "tool_used": "whisper, ocr" if source_type == "fusion" else source_type,
+            "confidence": conf,
+            "frame_image_path": "",
+            "source": "whisper, ocr" if source_type == "fusion" else source_type,
             "video_dir": video_dir,
         }
         result_path = os.path.join(video_dir, f"{_slugify(target_dialogue)}.json")
@@ -276,7 +330,11 @@ def _run_main():
     else:
 
         console.print("[red]Pipeline failed to find any candidate matches for the target dialogue.[/red]")
-        output_data = {"status": "failed", "reason": "No matches found in subtitles, audio, or coarse OCR."}
+        console.print("[yellow] Suggestion: Try using a larger Whisper model size (e.g., 'small' or 'medium') or lowering the fuzzy match threshold.[/yellow]")
+        output_data = {
+            "status": "failed", 
+            "reason": "No matches found in subtitles or audio. Suggestion: Try using a higher Whisper model size or lowering the threshold."
+        }
         result_path = os.path.join(video_dir, f"{_slugify(target_dialogue)}.json")
         with open(result_path, "w") as f:
             json.dump(output_data, f, indent=2)

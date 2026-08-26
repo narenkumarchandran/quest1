@@ -45,6 +45,11 @@ If the text is not visually written on-screen (pure spoken dialogue) or if the r
 - The pipeline utilizes a mathematical fallback. It retrieves the original video's frames-per-second (FPS) and computes the exact frame number using: `int(timestamp_in_seconds * FPS)`.
 - Finally, all results, including the exact timestamp, derived frame number, match scores, and the specific tools used, are exported as a structured JSON object.
 
+### Step 7: Web Interface & API
+The pipeline exposes a FastAPI-based backend (`src/api.py`) which orchestrates the execution of the pipeline asynchronously.
+- A modern, responsive vanilla HTML/CSS/JS frontend is served directly from the backend.
+- The UI features real-time progress steps, dynamic toggles for GPU modes, and a clean result layout where metadata is displayed prominently above the high-resolution extracted frame screenshot.
+
 ## 4. Matching Strategy
 String matching is powered by `RapidFuzz`, blending `token_set_ratio` and `partial_ratio`. This fuzzy logic strategy is critical because:
 - OCR often misinterprets characters (e.g., "I" vs "l").
@@ -173,5 +178,4 @@ Example Executions & Outputs:
 - **Advanced Scene Text Recognition**: Incorporate more advanced deep learning models to read complex fonts, rotated text, and low-contrast subtitles better than standard OCR.
 - **Parallel Processing**: Download and process audio and subtitles concurrently to further speed up the initial detection phase.
 - **Batch & Playlist Processing**: Support scanning lists of videos or entire YouTube playlists automatically for batch processing.
-- **Graphical User Interface (GUI)**: Add a user-friendly frontend (web or desktop) so non-technical users can interact with the pipeline easily.
 - **Cloud/API Integration**: Deploy the architecture as an API or to serverless cloud functions for scalable, on-demand execution.

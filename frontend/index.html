@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Dialogue Detector</title>
+  <meta name="description" content="Find the exact frame and timestamp where a target dialogue appears in any video. Powered by Whisper, EasyOCR, and subtitle extraction." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+
+  <!-- Animated background orbs -->
+  <div class="bg-orb bg-orb--1"></div>
+  <div class="bg-orb bg-orb--2"></div>
+  <div class="bg-orb bg-orb--3"></div>
+
+  <a href="#" onclick="showScreen('input'); return false;" class="home-link">Home</a>
+  <div class="app-container">
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCREEN 1 — INPUT
+    ══════════════════════════════════════════════════════════ -->
+    <section id="screen-input" class="screen screen--active">
+      <div class="card">
+
+        <header class="card__header">
+          <div class="logo">
+            <div>
+              <h1 class="logo__title">Video Dialogue Detector</h1>
+              <p class="logo__sub">Locate any spoken or visual dialogue in a video — down to the exact frame.</p>
+            </div>
+          </div>
+        </header>
+
+        <form id="run-form" class="form" autocomplete="off">
+
+          <!-- URL input -->
+          <div class="form__group">
+            <label class="form__label" for="input-url">Video URL</label>
+            <div class="input-wrapper">
+              <input
+                id="input-url"
+                class="form__input"
+                type="url"
+                placeholder="https://youtu.be/dQw4w9WgXcQ"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Target dialogue -->
+          <div class="form__group">
+            <label class="form__label" for="input-target">Target Dialogue</label>
+            <div class="input-wrapper">
+              <input
+                id="input-target"
+                class="form__input"
+                type="text"
+                placeholder="e.g. &quot;I'll be back&quot;"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Mode toggle -->
+          <div class="form__group">
+            <label class="form__label">Processing Mode</label>
+            <div class="mode-toggle" id="mode-toggle-group" role="group" aria-label="Processing mode">
+              <button type="button" id="mode-gpu" class="mode-btn mode-btn--active" data-mode="gpu">
+                <span class="mode-btn__title">With GPU</span>
+                <span class="mode-btn__desc">Use GPU acceleration (Fast)</span>
+              </button>
+              <button type="button" id="mode-cpu" class="mode-btn" data-mode="cpu">
+                <span class="mode-btn__title">Without GPU</span>
+                <span class="mode-btn__desc">Run on CPU (Slower)</span>
+              </button>
+            </div>
+            <div id="gpu-badge" class="gpu-badge gpu-badge--loading">
+              <span class="gpu-badge__dot"></span>
+              <span id="gpu-badge-text">Detecting GPU…</span>
+            </div>
+          </div>
+
+          <!-- Advanced panel -->
+          <details id="advanced-panel" class="advanced">
+            <summary class="advanced__toggle" id="advanced-summary">
+              <span>Advanced Options</span>
+              <span class="advanced__arrow">›</span>
+            </summary>
+            <div class="advanced__body">
+
+              <div class="form__group">
+                <label class="form__label" for="input-threshold">
+                  Fuzzy Match Threshold
+                  <span id="threshold-display" class="form__label-value">75%</span>
+                </label>
+                <input
+                  id="input-threshold"
+                  class="form__range"
+                  type="range"
+                  min="40" max="100" step="1" value="75"
+                />
+              </div>
+
+              <div class="form__group">
+                <label class="form__label" for="input-whisper-model">Whisper Model Size</label>
+                <select id="input-whisper-model" class="form__select">
+                  <option value="tiny">Tiny — fastest, least accurate</option>
+                  <option value="base" selected>Base — balanced (recommended)</option>
+                  <option value="small">Small — more accurate, slower</option>
+                  <option value="medium">Medium — high accuracy</option>
+                  <option value="large">Large — best accuracy, very slow</option>
+                </select>
+              </div>
+
+              <div class="checkbox-group">
+                <label class="checkbox-label" for="input-cookies">
+                  <input id="input-cookies" type="checkbox" class="checkbox-input" />
+                  <span class="checkbox-custom"></span>
+                  Use browser cookies (for age-restricted / private videos)
+                </label>
+                <label class="checkbox-label" for="input-disable-subs">
+                  <input id="input-disable-subs" type="checkbox" class="checkbox-input" />
+                  <span class="checkbox-custom"></span>
+                  Disable subtitle search (force Whisper + OCR fallback)
+                </label>
+              </div>
+
+            </div>
+          </details>
+
+          <button id="submit-btn" type="submit" class="btn btn--primary btn--full">
+            <span class="btn__text">Find Dialogue</span>
+          </button>
+
+        </form>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCREEN 2 — PROCESSING
+    ══════════════════════════════════════════════════════════ -->
+    <section id="screen-processing" class="screen">
+      <div class="card">
+
+        <header class="card__header card__header--center">
+          <div class="spinner"></div>
+          <h2 class="card__title">Processing…</h2>
+          <p class="card__sub" id="processing-step-label">Initialising pipeline</p>
+        </header>
+
+        <!-- Progress bar -->
+        <div class="progress-wrap">
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-bar__fill" style="width: 5%"></div>
+          </div>
+          <div class="progress-meta">
+            <span id="progress-step">Step 1</span>
+            <span id="progress-pct">5%</span>
+          </div>
+        </div>
+
+        <button id="cancel-btn" type="button" class="btn btn--danger btn--full">
+          <span class="btn__text">Cancel</span>
+        </button>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCREEN 3 — RESULT (SUCCESS)
+    ══════════════════════════════════════════════════════════ -->
+    <section id="screen-result" class="screen">
+      <div class="card">
+
+        <header class="card__header card__header--center">
+          <h2 class="card__title">Match Found!</h2>
+          <p class="card__sub" id="result-detection-type"></p>
+        </header>
+
+        <div class="result-layout">
+
+          <!-- Metadata -->
+          <div class="result-meta">
+            <div class="meta-item">
+              <div>
+                <div class="meta-item__label">Timestamp</div>
+                <div class="meta-item__value" id="result-timestamp">—</div>
+              </div>
+            </div>
+            <div class="meta-item">
+              <div>
+                <div class="meta-item__label">Frame Number</div>
+                <div class="meta-item__value" id="result-frame-no">—</div>
+              </div>
+            </div>
+            <div class="meta-item">
+              <div>
+                <div class="meta-item__label">Matched Text</div>
+                <div class="meta-item__value meta-item__value--quote" id="result-text">—</div>
+              </div>
+            </div>
+            <div class="meta-item">
+              <div>
+                <div class="meta-item__label">Similarity Score</div>
+                <div class="meta-item__value" id="result-score">—</div>
+              </div>
+            </div>
+            <div class="meta-item">
+              <div>
+                <div class="meta-item__label">Method Used</div>
+                <div class="meta-item__value" id="result-method">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Frame screenshot -->
+          <div class="result-frame" id="result-frame-wrap">
+            <img id="result-frame-img" class="result-frame__img" src="" alt="Extracted frame" />
+            <div class="result-frame__overlay" id="result-no-frame">
+              <span>No visual frame extracted</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="btn-row">
+          <button id="download-btn" type="button" class="btn btn--secondary">
+            <span class="btn__text">Download Frame</span>
+          </button>
+          <button id="again-btn" type="button" class="btn btn--primary">
+            <span class="btn__text">Run Again</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCREEN 4 — RESULT (FAILURE)
+    ══════════════════════════════════════════════════════════ -->
+    <section id="screen-failure" class="screen">
+      <div class="card">
+
+        <header class="card__header card__header--center">
+          <h2 class="card__title">No Match Found</h2>
+          <p class="card__sub">The pipeline could not locate the target dialogue.</p>
+        </header>
+
+        <div class="failure-reason" id="failure-reason"></div>
+
+        <div class="suggestions">
+          <h3 class="suggestions__title">Suggestions</h3>
+          <ul class="suggestions__list">
+            <li>Use a higher Whisper model size (e.g., Small or Medium) for better audio recognition</li>
+            <li>Lower the fuzzy match threshold in Advanced Options</li>
+            <li>Enable "Disable subtitle search" to force Whisper + OCR</li>
+            <li>Check that the video URL is publicly accessible</li>
+            <li>Try a shorter, simpler phrase from the dialogue</li>
+            <li>Enable "Use browser cookies" for age-restricted videos</li>
+          </ul>
+        </div>
+
+        <button id="retry-btn" type="button" class="btn btn--primary btn--full">
+          <span class="btn__text">Try Again</span>
+        </button>
+
+      </div>
+    </section>
+
+  </div><!-- /.app-container -->
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

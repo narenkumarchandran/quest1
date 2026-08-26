@@ -13,8 +13,16 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source code
+# Copy application source code and frontend
 COPY src/ ./src/
+COPY frontend/ ./frontend/
 
-# Use ENTRYPOINT so users can pass CLI arguments directly to the container
-ENTRYPOINT ["python", "src/main.py"]
+# Copy entrypoint script
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
+# Expose web server port
+EXPOSE 8000
+
+# Use ENTRYPOINT to dynamically handle CLI or Web UI requests
+ENTRYPOINT ["./entrypoint.sh"]

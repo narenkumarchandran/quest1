@@ -75,6 +75,24 @@ def _extract_video_id(url: str) -> str:
     segment = parsed.path.rstrip("/").split("/")[-1]
     return segment or re.sub(r"[^A-Za-z0-9_-]", "_", url)[-40:]
 
+def get_video_duration(url: str) -> float:
+    try:
+        cmd = _get_ytdlp_base() + ["--print", "%(duration)s", "--no-download", "--quiet", "--no-warnings", url]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        if result.returncode == 0:
+            duration_str = result.stdout.strip()
+            if duration_str and duration_str != "None":
+                if ":" in duration_str:
+                    parts = duration_str.split(":")
+                    if len(parts) == 3:
+                        return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+                    elif len(parts) == 2:
+                        return float(parts[0]) * 60 + float(parts[1])
+                return float(duration_str)
+    except Exception as e:
+        console.print(f"[dim]Failed to get video duration: {e}[/dim]")
+    return 0.0
+
 def _get_video_dir(url: str, base_output_dir: str) -> Path:
     
     video_id = _extract_video_id(url)
