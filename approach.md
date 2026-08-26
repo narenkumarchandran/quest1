@@ -5,7 +5,7 @@ This system implements an efficient "Audio-First" phased architecture to identif
 
 ### Demo Video
 
-<video src="./assets/Demo_video.mp4" controls="controls" style="max-width: 100%;">
+<video src="https://github.com/narenkumarchandran/quest1/raw/main/assets/Demo_video.mp4" controls="controls" style="max-width: 100%;">
   Your browser does not support the video tag.
 </video>
 
