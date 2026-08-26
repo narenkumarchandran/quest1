@@ -39,6 +39,16 @@ If the text is not found visually on screen (i.e., it's a spoken dialogue), the 
 
 *(Note: Depending on your CUDA version, you may need to install a specific version of PyTorch manually for full GPU acceleration).*
 
+## Testing
+
+The project includes a comprehensive unit testing suite built with `pytest`. It covers fuzzy text matching, timestamp manipulation, and video metadata extraction (without needing to download heavy videos during the test).
+
+To run the test suite, simply use the following command from the root directory:
+
+```bash
+python -m pytest tests/
+```
+
 ## Usage
 
 Run the pipeline from the project root by targeting `src/main.py`.
