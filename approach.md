@@ -124,12 +124,12 @@ Example Executions & Outputs:
 {
   "status": "success",
   "detection_type": "visual_text",
-  "timestamp": "00:02:09.720",
-  "frame_number": 3243,
-  "dialogue_text": "I'm the type of person",
-  "similarity_score": 90.68,
-  "frame_image_path": "C:\\Quest1\\output\\iXZ1jeTCU-o\\frame_3243.png",
-  "tool_used": "ocr",
+  "timestamp": "00:02:03.700",
+  "frame_number": 200,
+  "dialogue_text": "Can I say something ?",
+  "similarity_score": 100.0,
+  "frame_image_path": "C:\\Quest1\\output\\iXZ1jeTCU-o\\frame_200.png",
+  "tool_used": "whisper, ocr",
   "video_dir": "C:\\Quest1\\output\\iXZ1jeTCU-o"
 }
 ```
