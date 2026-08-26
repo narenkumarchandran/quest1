@@ -25,3 +25,6 @@ srt>=3.5.3
 # Windows: https://www.gyan.dev/ffmpeg/builds/ (add bin/ to PATH)
 # Linux:   sudo apt install ffmpeg
 # Mac:     brew install ffmpeg
+
+# Testing
+pytest>=8.0.0
