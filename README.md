@@ -7,9 +7,7 @@ A resource-efficient multimodal pipeline, multi-modal pipeline designed to find 
 
 ## Demo Video
 
-<video src="https://github.com/narenkumarchandran/quest1/raw/main/assets/Demo_video.mp4" controls="controls" style="max-width: 100%;">
-  Your browser does not support the video tag.
-</video>
+▶️ [**Click here to watch the Demo Video**](https://github.com/narenkumarchandran/quest1/raw/main/assets/Demo_video.mp4)
 
 ## How It Works (The Pipeline)
 

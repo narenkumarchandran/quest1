@@ -5,9 +5,7 @@ This system implements an efficient "Audio-First" phased architecture to identif
 
 ### Demo Video
 
-<video src="https://github.com/narenkumarchandran/quest1/raw/main/assets/Demo_video.mp4" controls="controls" style="max-width: 100%;">
-  Your browser does not support the video tag.
-</video>
+▶️ [**Click here to watch the Demo Video**](https://github.com/narenkumarchandran/quest1/raw/main/assets/Demo_video.mp4)
 
 ## 2. Full Logic and Flowchart Diagram
 The pipeline uses the following step-by-step logic, visualized in the flowchart below:
