@@ -88,6 +88,9 @@ Then, open your web browser and navigate to: **[http://localhost:8000](http://lo
 
 From the web interface, you can input a video URL, target dialogue, select processing modes (With GPU / Without GPU), configure advanced options, and view the final matched frame seamlessly.
 
+**Web Interface Example:**
+![Web UI Output](./assets/UI_Output.png)
+
 ### Examples
 
 **Basic Run (CPU):**
